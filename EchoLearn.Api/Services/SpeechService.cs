@@ -2,7 +2,7 @@ using System.Linq.Expressions;
 using Microsoft.CognitiveServices.Speech;
 using Microsoft.CognitiveServices.Speech.Audio;
 
-namespace EchoLearnAI.Api.Services
+namespace EchoLearn.Api.Services
 {
     public class SpeechService : ISpeechService
     {

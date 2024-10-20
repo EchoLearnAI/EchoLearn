@@ -1,1 +1,1 @@
-# EchoLearnAI
+# EchoLearn

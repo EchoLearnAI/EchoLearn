@@ -1,7 +1,7 @@
-using EchoLearnAI.Api.Services;
+using EchoLearn.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace EchoLearnAI.Api.Controllers
+namespace EchoLearn.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]

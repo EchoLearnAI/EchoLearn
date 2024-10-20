@@ -1,4 +1,4 @@
-namespace EchoLearnAI.Api.Services
+namespace EchoLearn.Api.Services
 {
     public interface ISpeechService
     {

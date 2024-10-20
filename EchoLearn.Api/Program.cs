@@ -1,4 +1,4 @@
-using EchoLearnAI.Api.Services;
+using EchoLearn.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
