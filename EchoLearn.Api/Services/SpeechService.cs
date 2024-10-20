@@ -8,11 +8,13 @@ namespace EchoLearn.Api.Services
     {
         private readonly ILogger<SpeechService> _logger;
         private readonly IConfiguration _configuration;
+        private readonly ISpeechRecognizerFactory _speechRecognizerFactory;
 
-        public SpeechService(ILogger<SpeechService> logger, IConfiguration configuration)
+        public SpeechService(ILogger<SpeechService> logger, IConfiguration configuration, ISpeechRecognizerFactory speechRecognizerFactory)
         {
             _logger = logger;
             _configuration = configuration;
+            _speechRecognizerFactory = speechRecognizerFactory;
         }
 
         public async Task<string> RecognizeSpeechAsync(Stream audioStream)
@@ -41,7 +43,7 @@ namespace EchoLearn.Api.Services
 
                 var audioConfig = AudioConfig.FromStreamInput(pushStream);
 
-                using var recognizer = new SpeechRecognizer(speechConfig, audioConfig);
+                using var recognizer = _speechRecognizerFactory.CreateSpeechRecognizer(speechConfig, audioConfig);
                 var result = await recognizer.RecognizeOnceAsync();
 
                 if (result.Reason == ResultReason.RecognizedSpeech)

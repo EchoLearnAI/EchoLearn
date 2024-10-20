@@ -4,6 +4,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
+builder.Services.AddScoped<ISpeechRecognizerFactory, SpeechRecognizerFactory>();
 builder.Services.AddScoped<ISpeechService, SpeechService>();
 
 // Add logging
