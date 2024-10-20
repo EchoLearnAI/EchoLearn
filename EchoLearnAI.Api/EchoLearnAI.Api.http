@@ -1,0 +1,6 @@
+@EchoLearnAI.Api_HostAddress = http://localhost:5023
+
+GET {{EchoLearnAI.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
