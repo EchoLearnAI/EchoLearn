@@ -6,6 +6,16 @@
 # dotenv files
 .env
 
+# TF Files
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+terraform.tfvars
+plan.out
+backend.tfbackend
+vscommpostsapi.properties
+
 # User-specific files
 *.rsuser
 *.suo
