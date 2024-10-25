@@ -4,10 +4,10 @@ terraform {
     container_name       = "tfstate"
     key                  = "echotf/terraform.tfstate"
     use_azuread_auth     = true
-    client_id            = ""
-    client_secret        = ""
-    tenant_id            = ""
-    subscription_id      = ""
+    client_id            = var.client_id
+    client_secret        = var.client_secret
+    tenant_id            = var.tenant_id
+    subscription_id      = var.subscription_id
   }
   required_providers {
     azurerm = {
@@ -24,7 +24,7 @@ provider "azurerm" {
     }
   }
   storage_use_azuread = true
-  subscription_id     = ""
+  subscription_id     = var.subscription_id
 }
 
 resource "azurerm_resource_group" "el_rg" {
