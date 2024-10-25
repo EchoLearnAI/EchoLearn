@@ -16,7 +16,7 @@ plan.out
 backend.tfbackend
 vscommpostsapi.properties
 *.tfvars
-
+*.tfbackend
 # User-specific files
 *.rsuser
 *.suo
