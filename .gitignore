@@ -17,6 +17,8 @@ backend.tfbackend
 vscommpostsapi.properties
 *.tfvars
 *.tfbackend
+*.tfstate.lock.info
+
 # User-specific files
 *.rsuser
 *.suo

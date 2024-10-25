@@ -15,24 +15,3 @@ variable "env" {
   description = "Environment name"
   default     = "dev"
 }
-
-variable "client_id" {
-  type        = string
-  description = "Azure AD Client ID"
-}
-
-variable "client_secret" {
-  type        = string
-  description = "Azure AD Client Secret"
-  sensitive   = true
-}
-
-variable "tenant_id" {
-  type        = string
-  description = "Azure AD Tenant ID"
-}
-
-variable "subscription_id" {
-  type        = string
-  description = "Azure Subscription"
-}
