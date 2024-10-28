@@ -5,6 +5,7 @@ provider "azurerm" {
 }
 
 data "azurerm_subscription" "main" {}
+data "azurerm_client_config" "main" {}
 
 resource "random_string" "main" {
   length  = 6
@@ -51,4 +52,10 @@ resource "azurerm_storage_container" "main" {
   name                  = "tfstate"
   storage_account_name  = azurerm_storage_account.main.name
   container_access_type = "private"
+}
+
+resource "azurerm_role_assignment" "user_blob_contributor" {
+  scope                = azurerm_storage_account.main.id
+  role_definition_name = "Storage Blob Data Contributor"
+  principal_id         = data.azurerm_client_config.main.object_id
 }
