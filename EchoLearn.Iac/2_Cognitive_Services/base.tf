@@ -4,6 +4,7 @@ resource "random_string" "main" {
   upper   = false
 }
 
+data "azurerm_subscription" "main" {}
 data "azurerm_client_config" "current" {}
 
 # App components resource group

@@ -24,4 +24,5 @@ provider "azurerm" {
     }
   }
   storage_use_azuread = true
+  subscription_id     = "50438a2a-9e6c-4222-8d8b-f2157a24ab96"
 }

@@ -1,5 +1,5 @@
 resource "azurerm_public_ip" "main" {
-  count = var.deploy_virtual_machine && var.public_network_access_enabled ? 0 : 1
+  count = var.deploy_virtual_machine && var.public_network_access_enabled == false ? 1 : 0
 
   name                = "${var.org}-pip-${var.env}"
   resource_group_name = azurerm_resource_group.el_rg_net[0].name
@@ -8,7 +8,7 @@ resource "azurerm_public_ip" "main" {
 }
 
 resource "azurerm_network_interface" "main" {
-  count = var.deploy_virtual_machine && var.public_network_access_enabled ? 0 : 1
+  count = var.deploy_virtual_machine && var.public_network_access_enabled == false ? 1 : 0
 
   name                = "${var.org}-nic-${var.env}"
   location            = azurerm_resource_group.el_rg_net[0].location
@@ -23,7 +23,7 @@ resource "azurerm_network_interface" "main" {
 }
 
 resource "azurerm_windows_virtual_machine" "main" {
-  count = var.deploy_virtual_machine && var.public_network_access_enabled ? 0 : 1
+  count = var.deploy_virtual_machine && var.public_network_access_enabled == false ? 1 : 0
 
   name                = "${var.org}-vm-${var.env}"
   location            = azurerm_resource_group.el_rg.location
