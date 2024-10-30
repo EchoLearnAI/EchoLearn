@@ -47,7 +47,7 @@ resource "azurerm_key_vault_secret" "kv_s_openai" {
 }
 
 resource "azurerm_cognitive_deployment" "el_ca_openai_deployment" {
-  name                 = "${var.org}-cd-openai-${var.env}"
+  name                 = "${var.org}-cd-openai-dp-${var.env}"
   cognitive_account_id = azurerm_cognitive_account.el_ca_openai.id
   model {
     format  = "OpenAI"
@@ -72,10 +72,6 @@ resource "azurerm_monitor_diagnostic_setting" "example" {
   name                       = "${var.org}-montior-cd-${var.env}"
   target_resource_id         = azurerm_cognitive_account.el_ca_openai.id
   log_analytics_workspace_id = azurerm_log_analytics_workspace.el_la_openai.id
-
-  enabled_log {
-    category = "AuditLogs"
-  }
 
   metric {
     category = "AllMetrics"

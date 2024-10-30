@@ -1,7 +1,7 @@
 variable "location" {
   type        = string
   description = "Azure Region where all these resources will be provisioned"
-  default     = "westeurope"
+  default     = "eastus2"
 }
 
 variable "org" {
