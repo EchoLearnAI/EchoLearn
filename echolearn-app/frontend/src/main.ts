@@ -4,7 +4,7 @@ const sendBtn = document.getElementById("sendBtn") as HTMLButtonElement;
 
 // Connect to WebSocket
 const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-const socket = new WebSocket(`${protocol}//localhost:8080/ws`);
+const socket = new WebSocket(`${protocol}//localhost:8081/ws`);
 
 socket.onmessage = (event) => {
     const msg = document.createElement("p");
