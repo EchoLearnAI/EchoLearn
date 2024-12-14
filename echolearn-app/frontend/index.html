@@ -1,14 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chat App</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Chat Example</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+  }
+  #messages {
+    border: 1px solid #ccc;
+    padding: 10px;
+    height: 300px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+  }
+  #messageInput {
+    width: 80%;
+    padding: 10px;
+  }
+  #sendBtn {
+    padding: 10px;
+  }
+</style>
 </head>
 <body>
-    <div id="messages"></div>
-    <input id="messageInput" placeholder="Type your message here" />
-    <button id="sendBtn">Send</button>
-    <script type="module" src="/src/main.ts"></script>
+<script>
+  // Ask for the user's name
+  const username = prompt("Enter your name") || "Anonymous";
+  
+  // Create elements
+  const welcomeMessage = document.createElement('h2');
+  welcomeMessage.textContent = `Welcome, ${username}`;
+  document.body.appendChild(welcomeMessage);
+
+  const messagesDiv = document.createElement('div');
+  messagesDiv.id = 'messages';
+  document.body.appendChild(messagesDiv);
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.id = 'messageInput';
+  input.placeholder = 'Type something...';
+  document.body.appendChild(input);
+
+  const sendBtn = document.createElement('button');
+  sendBtn.id = 'sendBtn';
+  sendBtn.textContent = 'Send';
+  document.body.appendChild(sendBtn);
+
+  // Function to display a message on the screen
+  function displayMessage(text) {
+    const p = document.createElement('p');
+    p.textContent = text;
+    messagesDiv.appendChild(p);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+
+  // Send button click handler
+  sendBtn.onclick = () => {
+    sendMessage();
+  };
+
+  // Send message on pressing 'Enter'
+  input.addEventListener('keyup', (e) => {
+    if (e.key === 'Enter') {
+      sendMessage();
+    }
+  });
+
+  function sendMessage() {
+    const message = input.value.trim();
+    if (!message) return;
+    displayMessage(`${username}: ${message}`);
+    input.value = '';
+  }
+
+  // Optionally, you could show the welcome message in the messages area as well
+  displayMessage(`Hello ${username}, feel free to start typing!`);
+</script>
 </body>
 </html>

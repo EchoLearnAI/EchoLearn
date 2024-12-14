@@ -1,114 +1,140 @@
 package main
 
 import (
+	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/websocket"
+	_ "github.com/lib/pq"
 )
 
-// Client represents a connected client
-type Client struct {
-	conn *websocket.Conn
-	send chan []byte
-}
+var db *sql.DB
 
-// Hub maintains active clients and broadcasts messages
-type Hub struct {
-	clients    map[*Client]bool
-	broadcast  chan []byte
-	register   chan *Client
-	unregister chan *Client
-}
-
-func newHub() *Hub {
-	return &Hub{
-		clients:    make(map[*Client]bool),
-		broadcast:  make(chan []byte),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-	}
-}
-
-func (h *Hub) run() {
-	for {
-		select {
-		case client := <-h.register:
-			h.clients[client] = true
-		case client := <-h.unregister:
-			if _, ok := h.clients[client]; ok {
-				delete(h.clients, client)
-				close(client.send)
-			}
-		case message := <-h.broadcast:
-			for client := range h.clients {
-				select {
-				case client.send <- message:
-				default:
-					close(client.send)
-					delete(h.clients, client)
-				}
-			}
-		}
-	}
-}
-
-func (c *Client) readPump(h *Hub) {
-	defer func() {
-		h.unregister <- c
-		c.conn.Close()
-	}()
-	for {
-		_, message, err := c.conn.ReadMessage()
-		if err != nil {
-			log.Println("read error:", err)
-			break
-		}
-		// Broadcast the message to all clients
-		h.broadcast <- message
-	}
-}
-
-func (c *Client) writePump() {
-	for msg := range c.send {
-		err := c.conn.WriteMessage(websocket.TextMessage, msg)
-		if err != nil {
-			log.Println("write error:", err)
-			break
-		}
-	}
+type Message struct {
+	ID        int       `json:"id"`
+	Username  string    `json:"username"`
+	Message   string    `json:"message"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
-		// For testing. In production, check the origin properly.
-		return true
+		return true // Allow all origins (customize this in production)
 	},
 }
 
-func serveWs(h *Hub, w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
+func initDB() {
+	var err error
+	connStr := "postgres://postgres:postgres@db:5432/chatdb?sslmode=disable"
+	db, err = sql.Open("postgres", connStr)
 	if err != nil {
-		log.Println("WebSocket upgrade error:", err)
+		log.Fatalf("Error connecting to the database: %v", err)
+	}
+
+	if err = db.Ping(); err != nil {
+		log.Fatalf("Error verifying database connection: %v", err)
+	}
+	fmt.Println("Connected to the database!")
+}
+
+func fetchMessagesFromDB() ([]Message, error) {
+	rows, err := db.Query("SELECT id, username, message, timestamp FROM messages ORDER BY timestamp ASC")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var messages []Message
+	for rows.Next() {
+		var msg Message
+		if err := rows.Scan(&msg.ID, &msg.Username, &msg.Message, &msg.Timestamp); err != nil {
+			return nil, err
+		}
+		messages = append(messages, msg)
+	}
+	return messages, nil
+}
+
+func handleMessages(w http.ResponseWriter, r *http.Request) {
+	// Extract the username query parameter
+	username := r.URL.Query().Get("username")
+
+	// Query messages specific to the username
+	var rows *sql.Rows
+	var err error
+	if username != "" {
+		rows, err = db.Query("SELECT id, username, message, timestamp FROM messages WHERE username = $1 ORDER BY timestamp ASC", username)
+	} else {
+		http.Error(w, "Username is required", http.StatusBadRequest)
 		return
 	}
-	client := &Client{conn: conn, send: make(chan []byte, 256)}
-	h.register <- client
-	go client.writePump()
-	go client.readPump(h)
+
+	if err != nil {
+		http.Error(w, "Failed to fetch messages", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var messages []Message
+	for rows.Next() {
+		var msg Message
+		err := rows.Scan(&msg.ID, &msg.Username, &msg.Message, &msg.Timestamp)
+		if err != nil {
+			log.Println("Error scanning row:", err)
+			continue
+		}
+		messages = append(messages, msg)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(messages)
+}
+
+func handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println("WebSocket upgrade failed:", err)
+		return
+	}
+	defer conn.Close()
+
+	for {
+		var msg Message
+		err := conn.ReadJSON(&msg)
+		if err != nil {
+			log.Println("Read error:", err)
+			break
+		}
+
+		msg.Timestamp = time.Now()
+
+		// Save the message to the database
+		if err := saveMessageToDB(msg); err != nil {
+			log.Println("Failed to save message:", err)
+			continue
+		}
+
+		// Echo the message back to the client
+		conn.WriteJSON(msg)
+	}
+}
+
+func saveMessageToDB(msg Message) error {
+	query := "INSERT INTO messages (username, message, timestamp) VALUES ($1, $2, $3)"
+	_, err := db.Exec(query, msg.Username, msg.Message, msg.Timestamp)
+	return err
 }
 
 func main() {
-	hub := newHub()
-	go hub.run()
+	initDB()
 
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		serveWs(hub, w, r)
-	})
+	http.HandleFunc("/messages", handleMessages) // Endpoint to fetch all messages
+	http.HandleFunc("/ws", handleWebSocket)      // WebSocket for real-time messaging
 
-	fmt.Println("Server started on http://localhost:8081")
-	if err := http.ListenAndServe(":8081", nil); err != nil {
-		log.Fatal(err)
-	}
+	fmt.Println("Server running on port 8081...")
+	log.Fatal(http.ListenAndServe(":8081", nil))
 }

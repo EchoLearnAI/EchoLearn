@@ -1,28 +1,19 @@
-# Stage 1: Build the frontend using Node.js
+# Stage 1: Build the frontend
 FROM node:20-alpine AS builder
 
 WORKDIR /app
+COPY package.json package-lock.json tsconfig.json vite.config.ts ./
+RUN npm install
 
-# Copy dependencies and install
-COPY package*.json tsconfig.json vite.config.ts ./
-RUN npm install --frozen-lockfile
-
-# Copy source files and build the static files
 COPY src ./src
 COPY index.html ./
 RUN npm run build
 
-# Stage 2: Run the static server
+# Stage 2: Serve the built files
 FROM node:20-alpine AS runner
 
 WORKDIR /app
-
-# Install serve to serve static files
 RUN npm install -g serve
-
-# Copy built static files
 COPY --from=builder /app/dist /app
-
-# Expose port and run the server
 EXPOSE 3000
 CMD ["serve", "-s", "-l", "3000", "/app"]
