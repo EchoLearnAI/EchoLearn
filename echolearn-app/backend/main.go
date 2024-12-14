@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
@@ -17,6 +18,7 @@ var db *sql.DB
 type Message struct {
 	ID        int       `json:"id"`
 	Username  string    `json:"username"`
+	Location  string    `json:"location"`
 	Message   string    `json:"message"`
 	Timestamp time.Time `json:"timestamp"`
 }
@@ -41,8 +43,48 @@ func initDB() {
 	fmt.Println("Connected to the database!")
 }
 
-func fetchMessagesFromDB() ([]Message, error) {
-	rows, err := db.Query("SELECT id, username, message, timestamp FROM messages ORDER BY timestamp ASC")
+// Fetch user location based on their IP address
+func fetchUserLocation(ip string) (string, error) {
+	apiURL := fmt.Sprintf("https://ipwhois.app/json/%s", ip)
+	resp, err := http.Get(apiURL)
+	if err != nil {
+		return "Unknown", err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "Unknown", err
+	}
+
+	// Parse the JSON response to extract the "country" field
+	type IPResponse struct {
+		Country string `json:"country"`
+	}
+
+	var ipResp IPResponse
+	if err := json.Unmarshal(body, &ipResp); err != nil {
+		return "Unknown", err
+	}
+
+	if ipResp.Country == "" {
+		return "Unknown", nil
+	}
+	return ipResp.Country, nil
+}
+
+func fetchMessagesFromDB(username string) ([]Message, error) {
+	var rows *sql.Rows
+	var err error
+
+	if username != "" {
+		// Fetch messages for a specific user
+		rows, err = db.Query("SELECT id, username, location, message, timestamp FROM messages WHERE username = $1 ORDER BY timestamp ASC", username)
+	} else {
+		// Fetch all messages
+		rows, err = db.Query("SELECT id, username, location, message, timestamp FROM messages ORDER BY timestamp ASC")
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +93,7 @@ func fetchMessagesFromDB() ([]Message, error) {
 	var messages []Message
 	for rows.Next() {
 		var msg Message
-		if err := rows.Scan(&msg.ID, &msg.Username, &msg.Message, &msg.Timestamp); err != nil {
+		if err := rows.Scan(&msg.ID, &msg.Username, &msg.Location, &msg.Message, &msg.Timestamp); err != nil {
 			return nil, err
 		}
 		messages = append(messages, msg)
@@ -60,36 +102,16 @@ func fetchMessagesFromDB() ([]Message, error) {
 }
 
 func handleMessages(w http.ResponseWriter, r *http.Request) {
-	// Extract the username query parameter
 	username := r.URL.Query().Get("username")
 
-	// Query messages specific to the username
-	var rows *sql.Rows
-	var err error
-	if username != "" {
-		rows, err = db.Query("SELECT id, username, message, timestamp FROM messages WHERE username = $1 ORDER BY timestamp ASC", username)
-	} else {
-		http.Error(w, "Username is required", http.StatusBadRequest)
-		return
-	}
-
+	// Use fetchMessagesFromDB to get the data
+	messages, err := fetchMessagesFromDB(username)
 	if err != nil {
 		http.Error(w, "Failed to fetch messages", http.StatusInternalServerError)
 		return
 	}
-	defer rows.Close()
 
-	var messages []Message
-	for rows.Next() {
-		var msg Message
-		err := rows.Scan(&msg.ID, &msg.Username, &msg.Message, &msg.Timestamp)
-		if err != nil {
-			log.Println("Error scanning row:", err)
-			continue
-		}
-		messages = append(messages, msg)
-	}
-
+	// Encode messages as JSON
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(messages)
 }
@@ -102,6 +124,14 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
+	// Get the client's IP address
+	clientIP := r.RemoteAddr
+	location, err := fetchUserLocation(clientIP)
+	if err != nil {
+		log.Println("Failed to fetch location:", err)
+		location = "Unknown"
+	}
+
 	for {
 		var msg Message
 		err := conn.ReadJSON(&msg)
@@ -110,6 +140,8 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
+		// Add the location dynamically
+		msg.Location = location
 		msg.Timestamp = time.Now()
 
 		// Save the message to the database
@@ -124,8 +156,8 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 }
 
 func saveMessageToDB(msg Message) error {
-	query := "INSERT INTO messages (username, message, timestamp) VALUES ($1, $2, $3)"
-	_, err := db.Exec(query, msg.Username, msg.Message, msg.Timestamp)
+	query := "INSERT INTO messages (username, location, message, timestamp) VALUES ($1, $2, $3, $4)"
+	_, err := db.Exec(query, msg.Username, msg.Location, msg.Message, msg.Timestamp)
 	return err
 }
 
