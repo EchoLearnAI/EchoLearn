@@ -36,7 +36,7 @@ for ENVIRONMENT in "${ENVIRONMENTS[@]}"; do
   # Container name
   CONTAINER_NAME="tfstate-init"
   # Tags (add more key-value pairs if you want)
-  TAGS="Owner=YourName Project=${PROJECT_NAME} Environment=${ENVIRONMENT}"
+  TAGS="Owner=Thiago Project=${PROJECT_NAME} Environment=${ENVIRONMENT}"
 
   echo "---------------------------------------------------"
   echo "Creating Resource Group: ${RG_NAME}"
