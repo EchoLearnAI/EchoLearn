@@ -34,7 +34,7 @@ for ENVIRONMENT in "${ENVIRONMENTS[@]}"; do
   # Create storage account name using the naming convention
   STORAGE_ACCOUNT_NAME="satf${LOCATION}${PROJECT_NAME}${ENVIRONMENT}"
   # Container name
-  CONTAINER_NAME="tfstate-init"
+  CONTAINER_NAME="tfstate-${ENVIRONMENT}"
   # Tags (add more key-value pairs if you want)
   TAGS="Owner=Thiago Project=${PROJECT_NAME} Environment=${ENVIRONMENT}"
 
@@ -57,7 +57,8 @@ for ENVIRONMENT in "${ENVIRONMENTS[@]}"; do
     --kind StorageV2 \
     --allow-blob-public-access false \
     --min-tls-version TLS1_2 \
-    --tags ${TAGS}
+    --tags ${TAGS} \
+    --default-action Deny
 
   echo "---------------------------------------------------"
   echo "Enabling Versioning on the Storage Account"
