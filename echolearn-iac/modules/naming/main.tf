@@ -17,7 +17,6 @@ module "az_naming" {
   source  = "Azure/naming/azurerm"
   version = "0.4.2"
   suffix = compact([
-    local.segment,
     local.project,
     var.product,
     var.name,
@@ -32,7 +31,6 @@ module "az_naming_limited" {
   source  = "Azure/naming/azurerm"
   version = "0.4.2"
   suffix = [join("", compact([
-    substr(local.segment, 0, 2),
     substr(local.project, 0, 2),
     var.product != "" ? substr(var.product, 0, 3) : "",
     substr(var.name, 0, 19 - (var.product != "" ? 3 : 0) - (var.location != "" ? 2 : 0) - (var.increment != null ? 2 : 0)),
@@ -44,7 +42,6 @@ module "az_naming_limited" {
 
 locals {
   spn_suffix = compact([
-    local.segment,
     local.project,
     var.product,
     var.environment,

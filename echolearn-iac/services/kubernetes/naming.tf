@@ -1,6 +1,7 @@
 module "naming" {
   source      = "../../modules/naming"
-  location    = var.location
-  project     = var.project
+  name        = var.name
   environment = var.environment
+  increment   = var.increment
+  location    = var.location
 }
