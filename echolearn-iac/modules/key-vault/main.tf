@@ -12,6 +12,8 @@ resource "azurerm_key_vault" "main" {
   sku_name                        = var.sku
 
   network_acls {
+    # Add ignore comment due to special case of GitHub Actions pulling secrets
+    #tfsec:ignore:azure-keyvault-specify-network-acl[default_action=Allow]
     default_action             = var.network_acls_default_action
     bypass                     = var.bypass_network_rules
     ip_rules                   = var.ipv4_networks_access
@@ -27,10 +29,10 @@ resource "azurerm_key_vault" "main" {
     content {
       tenant_id               = data.azurerm_client_config.current.tenant_id
       object_id               = access_policy.value.object_id
-      key_permissions         = access_policy.value.key_permissions
-      secret_permissions      = access_policy.value.secret_permissions
-      certificate_permissions = access_policy.value.certificate_permissions
-      storage_permissions     = access_policy.value.secret_permissions
+      key_permissions         = access_policy.value.permissions.key_permissions
+      secret_permissions      = access_policy.value.permissions.secret_permissions
+      certificate_permissions = access_policy.value.permissions.certificate_permissions
+      storage_permissions     = access_policy.value.permissions.storage_permissions
     }
   }
 

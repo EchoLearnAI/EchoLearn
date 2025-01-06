@@ -1,15 +1,16 @@
 resource "azurerm_container_registry" "main" {
-  name                = var.name
+  name = var.name
+
   location            = var.location
   resource_group_name = var.resource_group_name
-  sku                 = var.sku
-  admin_enabled       = var.admin_enabled
+
+  sku           = var.sku
+  admin_enabled = var.admin_enabled
 
   dynamic "network_rule_set" {
-    for_each = var.sku == "Premium" && lengh(var.ipv4_networks_access) > 0 ? ["network_rule_set"] : []
+    for_each = var.sku == "Premium" && length(var.ipv4_networks_access) > 0 ? ["network_rule_set"] : []
     content {
       default_action = "Deny"
-
       dynamic "ip_rule" {
         for_each = var.ipv4_networks_access
         content {
@@ -30,13 +31,17 @@ resource "azurerm_container_registry" "main" {
 
   dynamic "identity" {
     for_each = (
-      var.identity_ids == null ? [] : ["identity"]
+      var.identity_type == null
+      ? []
+      : ["identity"]
     )
 
     content {
       type = var.identity_type
       identity_ids = (
-        var.identity_type == "UserAssigned" ? var.identity_ids : null
+        var.identity_type == "UserAssigned"
+        ? var.identity_ids
+        : null
       )
     }
   }
