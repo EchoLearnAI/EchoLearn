@@ -1,11 +1,4 @@
 locals {
-  segments = {
-    pc = "Petcare"
-    sn = "Snacking"
-  }
-
-  segment = lookup(zipmap(values(local.segments), keys(local.segments)), var.segment)
-
   projects = {
     el = "Echo Learn"
   }
