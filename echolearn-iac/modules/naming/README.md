@@ -8,11 +8,10 @@ resources.
 ```hcl
 module "naming" {
   source      = "../modules/naming"
-  name        = "core"
+  name        = "ef"
   environment = "nonprd"
-  product     = "CMS"
   increment   = 1
-  location    = "westeurope"
+  location    = "eastus"
 }
 
 output "spn" {
@@ -33,9 +32,8 @@ output "k8s" {
 | <a name="input_name"></a> [name](#input\_name) | Name of the application or service the resource is deployed for. | `string` |
 | <a name="input_increment"></a> [increment](#input\_increment) | (Optional) A 2-digit increment number | `number` |
 | <a name="input_location"></a> [location](#input\_location) | (Optional) The region in which the resource is deployed. | `string` |
-| <a name="input_product"></a> [product](#input\_product) | (Optional) The product to which this resource belongs to, e.g. CMS, CRM, SSO, CDP or DAM | `string` |
-| <a name="input_project"></a> [project](#input\_project) | (Optional) The project to which this resource belongs to. Default: Growth Digital Platform | `string` |
-| <a name="input_segment"></a> [segment](#input\_segment) | (Optional) The segment to which this resource belongs to. Default: Petcare | `string` |
+| <a name="input_product"></a> [product](#input\_product) | (Optional) The product to which this resource belongs to. | `string` |
+| <a name="input_project"></a> [project](#input\_project) | (Optional) The project to which this resource belongs to. | `string` |
 
 ## Outputs
 

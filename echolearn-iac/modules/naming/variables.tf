@@ -8,16 +8,10 @@ variable "environment" {
   type        = string
 }
 
-variable "segment" {
-  description = "(Optional) The segment to which this resource belongs to. Default: Petcare"
-  type        = string
-  default     = "Petcare"
-}
-
 variable "project" {
-  description = "(Optional) The project to which this resource belongs to. Default: Growth Digital Platform"
+  description = "(Optional) The project to which this resource belongs to."
   type        = string
-  default     = "Growth Digital Platform"
+  default     = "Echo Learn"
 }
 
 variable "product" {
