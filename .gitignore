@@ -15,8 +15,6 @@ terraform.tfvars
 plan.out
 backend.tfbackend
 vscommpostsapi.properties
-*.tfvars
-*.tfbackend
 *.tfstate.lock.info
 
 # User-specific files

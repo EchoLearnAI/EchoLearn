@@ -1,0 +1,5 @@
+container_name       = "tfstate-init"
+key                  = "prd.tfstate"
+resource_group_name  = "rg-el-tf-prd-ue-01"
+storage_account_name = "steltfpue01"
+subscription_id      = "120ba57a-8a90-4d59-af71-12ff4aa3fbd3"
