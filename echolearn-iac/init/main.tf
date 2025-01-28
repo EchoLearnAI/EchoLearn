@@ -58,3 +58,9 @@ resource "azurerm_storage_container" "tfstate_eu" {
   storage_account_id    = azurerm_storage_account.tfstate.id
   container_access_type = "private"
 }
+
+resource "azurerm_storage_container" "tfstate_global" {
+  name                  = "tfstate-global"
+  storage_account_id    = azurerm_storage_account.tfstate.id
+  container_access_type = "private"
+}

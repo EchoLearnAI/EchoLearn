@@ -7,7 +7,7 @@ module "naming_global" {
 }
 
 resource "azurerm_resource_group" "global" {
-  name = module.naming_global.resource_group.name
+  name     = module.naming_global.resource_group.name
   location = var.location
-  tags = local.tags
+  tags     = local.tags
 }
