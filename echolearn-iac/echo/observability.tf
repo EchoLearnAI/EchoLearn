@@ -45,25 +45,25 @@ resource "azurerm_storage_account" "observability" {
 resource "azurerm_storage_account_network_rules" "observability" {
   storage_account_id = azurerm_storage_account.observability.id
 
-  default_action = "Deny"
-  virtual_network_subnet_ids = [ azurerm_subnet.echo_aks.id ]
-  bypass = ["AzureServices"]
+  default_action             = "Deny"
+  virtual_network_subnet_ids = [azurerm_subnet.echo_aks.id]
+  bypass                     = ["AzureServices"]
 }
 
 resource "azurerm_private_endpoint" "observability" {
-  name = module.naming_observability.private_endpoint.name
-  location = azurerm_resource_group.observability.location
+  name                = module.naming_observability.private_endpoint.name
+  location            = azurerm_resource_group.observability.location
   resource_group_name = azurerm_resource_group.observability.name
-  subnet_id = azurerm_subnet.private_link.id
+  subnet_id           = azurerm_subnet.private_link.id
 
   private_service_connection {
-    name = module.naming_observability.private_service_connection.name
+    name                 = module.naming_observability.private_service_connection.name
     is_manual_connection = false
-    subresource_names = ["Blob"]
+    subresource_names    = ["Blob"]
   }
 
   private_dns_zone_group {
-    name = module.naming_observability.private_dns_zone_group.name
+    name                 = module.naming_observability.private_dns_zone_group.name
     private_dns_zone_ids = [azurerm_private_dns_zone.blob.id]
   }
 

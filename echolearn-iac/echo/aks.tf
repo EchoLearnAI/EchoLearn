@@ -9,6 +9,7 @@ module "kubernetes_echo" {
   environment  = var.environment
   location     = var.location
   increment    = var.increment
+  project = var.project
   landing_zone = "eastus"
 
   kubernetes_cluster_admin_group_ids = var.kubernetes_cluster_admin_group_ids
@@ -29,4 +30,20 @@ module "kubernetes_echo" {
       }
     }
   }
+
+  network = {
+    subnet_aks_id = azurerm_subnet.echo_aks.id
+    subnet_ingress_id = azurerm_subnet.ingress.id
+    subnet_private_link_id = azurerm_subnet.private_link.id
+    vnet_resource_group_id = azurerm_resource_group.main.id
+  }
+
+  cluster_apps = {
+    cert_manager = { enabled = true }
+    external_dns = { enabled = true }
+  }
+
+  key_vault_private_dns_zone = azurerm_private_dns_zone.key_vault
+  aks_lb_names = [ "kubernetes", "kubernetes-internal" ]
+  monitor_action_group_id = var.monitor_action_group_id
 }

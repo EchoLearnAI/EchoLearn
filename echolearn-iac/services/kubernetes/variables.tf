@@ -116,3 +116,23 @@ variable "monitor_action_group_id" {
   description = "The Action Group ID used for alerts"
   type        = string
 }
+
+# ------------------------------------------------------------------------------
+# CLUSTER APPS
+# ------------------------------------------------------------------------------
+
+variable "cluster_apps" {
+  description = "Cluster apps configuration"
+  type = object({
+    cert_manager = optional(object({
+      enabled = bool
+      }), {
+      enabled = false
+    })
+    external_dns = optional(object({
+      enabled = bool
+      }), {
+      enabled = false
+    })
+  })
+}

@@ -1,5 +1,6 @@
 # Global naming
 variable "name" { type = string }
+variable "project" { type = string }
 variable "environment" { type = string }
 variable "location" { type = string }
 variable "increment" { type = number }
@@ -29,4 +30,12 @@ variable "app_pool" {
     min_count = number
     max_count = number
   })
+}
+
+# ------------------------------------------------------------------------------
+# MONITOR ALERTS
+# ------------------------------------------------------------------------------
+variable "monitor_action_group_id" {
+  description = "The Action Group ID used for alerts"
+  type        = string
 }
