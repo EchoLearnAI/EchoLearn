@@ -1,5 +1,6 @@
 variable "name" { type = string }
 variable "increment" { type = string }
+variable "landing_zone" { type = string }
 
 variable "location" {
   description = "The location of the resource"
