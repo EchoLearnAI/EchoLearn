@@ -1,0 +1,437 @@
+basePath: /api/v1
+definitions:
+  handlers.StartSessionRequest:
+    properties:
+      mode:
+        $ref: '#/definitions/models.GameMode'
+      user_id:
+        type: string
+    required:
+    - mode
+    - user_id
+    type: object
+  handlers.SubmitAnswerRequest:
+    properties:
+      question_id:
+        type: string
+      selected_option_id:
+        type: string
+      session_id:
+        type: string
+    required:
+    - question_id
+    - selected_option_id
+    - session_id
+    type: object
+  models.GameMode:
+    enum:
+    - survival
+    - five_topic
+    - infinite
+    type: string
+    x-enum-varnames:
+    - SurvivalMode
+    - FiveTopicMode
+    - InfiniteMode
+  models.GameSession:
+    properties:
+      created_at:
+        type: string
+      current_question_index:
+        description: Index for modes like 5-topic
+        type: integer
+      ended_at:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      max_mistakes:
+        description: For Survival Mode
+        type: integer
+      mistakes_made:
+        type: integer
+      mode:
+        allOf:
+        - $ref: '#/definitions/models.GameMode'
+        description: e.g., "survival", "five_topic", "infinite"
+      score:
+        type: integer
+      started_at:
+        type: string
+      total_questions:
+        description: For modes like 5-topic
+        type: integer
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  models.GrammarRule:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      examples:
+        description: Could be JSON array of strings or markdown
+        type: string
+      id:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.Option:
+    properties:
+      explanation:
+        description: Explanation for why this option is correct/incorrect
+        type: string
+      id:
+        type: string
+      is_correct:
+        type: boolean
+      label:
+        description: e.g., "A", "B", "C", "D" or the text itself
+        type: string
+      question_id:
+        description: Foreign key to Question
+        type: string
+      text:
+        description: The actual option text
+        type: string
+    type: object
+  models.Question:
+    properties:
+      category:
+        description: e.g., "Articles", "Prepositions"
+        type: string
+      created_at:
+        type: string
+      difficulty:
+        description: e.g., "Easy", "Medium", "Hard"
+        type: string
+      grammar_rule:
+        $ref: '#/definitions/models.GrammarRule'
+      grammar_rule_id:
+        type: string
+      id:
+        type: string
+      options:
+        items:
+          $ref: '#/definitions/models.Option'
+        type: array
+      text:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.User:
+    properties:
+      created_at:
+        type: string
+      email:
+        description: Optional
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      progress:
+        description: Simple JSON string for progress
+        type: string
+      updated_at:
+        type: string
+    type: object
+  utils.APIError:
+    properties:
+      code:
+        type: integer
+      details:
+        type: string
+      message:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: API for EchoLearn English learning app.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: EchoLearn API
+  version: "1.0"
+paths:
+  /questions:
+    post:
+      consumes:
+      - application/json
+      description: Adds a new question to the database. Requires admin privileges
+        (not implemented in MVP).
+      parameters:
+      - description: Question object
+        in: body
+        name: question
+        required: true
+        schema:
+          $ref: '#/definitions/models.Question'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Question'
+        "400":
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/utils.APIError'
+        "500":
+          description: Server error
+          schema:
+            $ref: '#/definitions/utils.APIError'
+      summary: Add a new question (admin)
+      tags:
+      - questions
+  /questions/{id}:
+    get:
+      description: Retrieves a specific question by its ID, including all options
+        and grammar rule details.
+      parameters:
+      - description: Question ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Question'
+        "404":
+          description: Question not found
+          schema:
+            $ref: '#/definitions/utils.APIError'
+        "500":
+          description: Server error
+          schema:
+            $ref: '#/definitions/utils.APIError'
+      summary: Get a question by ID with detailed feedback
+      tags:
+      - questions
+  /questions/category/{name}:
+    get:
+      description: Retrieves 10 questions for a given category
+      parameters:
+      - description: Category name
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Question'
+            type: array
+        "404":
+          description: No questions found for this category
+          schema:
+            $ref: '#/definitions/utils.APIError'
+        "500":
+          description: Server error
+          schema:
+            $ref: '#/definitions/utils.APIError'
+      summary: Get questions by category
+      tags:
+      - questions
+  /questions/random:
+    get:
+      description: Retrieves a single random question from the database
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Question'
+        "404":
+          description: No questions available
+          schema:
+            $ref: '#/definitions/utils.APIError'
+        "500":
+          description: Server error
+          schema:
+            $ref: '#/definitions/utils.APIError'
+      summary: Get a random question
+      tags:
+      - questions
+  /session/{id}/summary:
+    get:
+      description: Retrieves the summary of a completed or ongoing game session, including
+        score and answer breakdown.
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'session: models.GameSession, answered_questions: []models.AnsweredQuestionDetail'
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Session not found
+          schema:
+            $ref: '#/definitions/utils.APIError'
+        "500":
+          description: Server error
+          schema:
+            $ref: '#/definitions/utils.APIError'
+      summary: Get a game session summary
+      tags:
+      - sessions
+  /session/start:
+    post:
+      consumes:
+      - application/json
+      description: Initializes a new session for a user based on the selected game
+        mode.
+      parameters:
+      - description: Session Start Info
+        in: body
+        name: session_request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.StartSessionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.GameSession'
+        "400":
+          description: Invalid input or game mode
+          schema:
+            $ref: '#/definitions/utils.APIError'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/utils.APIError'
+        "500":
+          description: Server error
+          schema:
+            $ref: '#/definitions/utils.APIError'
+      summary: Start a new game session
+      tags:
+      - sessions
+  /session/submit:
+    post:
+      consumes:
+      - application/json
+      description: Records the user's answer, updates score/mistakes, and determines
+        if the session ends.
+      parameters:
+      - description: Answer Submission Info
+        in: body
+        name: answer_request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.SubmitAnswerRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'result: correct/incorrect, session_active: bool, session_details:
+            models.GameSession'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/utils.APIError'
+        "404":
+          description: Session or Question not found
+          schema:
+            $ref: '#/definitions/utils.APIError'
+        "500":
+          description: Server error
+          schema:
+            $ref: '#/definitions/utils.APIError'
+      summary: Submit an answer for the current question in a session
+      tags:
+      - sessions
+  /users:
+    post:
+      consumes:
+      - application/json
+      description: Add a new user to the system
+      parameters:
+      - description: User info
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.User'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/utils.APIError'
+        "500":
+          description: Server error
+          schema:
+            $ref: '#/definitions/utils.APIError'
+      summary: Create a new user
+      tags:
+      - users
+  /users/{id}:
+    get:
+      description: Retrieve user details by their ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/utils.APIError'
+        "500":
+          description: Server error
+          schema:
+            $ref: '#/definitions/utils.APIError'
+      summary: Get a user by ID
+      tags:
+      - users
+swagger: "2.0"
