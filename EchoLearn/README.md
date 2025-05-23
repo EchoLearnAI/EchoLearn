@@ -10,7 +10,7 @@ This is the backend service for the EchoLearn English learning mobile app.
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/echolearn.git
+   git clone https://github.com/EchoLearnAI/EchoLearn/.git
    cd echolearn
    ```
 

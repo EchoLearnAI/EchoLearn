@@ -3,10 +3,10 @@ package main
 import (
 	"log"
 
-	"github.com/yourusername/echolearn/api"
-	"github.com/yourusername/echolearn/config"
-	"github.com/yourusername/echolearn/data"
-	"github.com/yourusername/echolearn/db"
+	"github.com/EchoLearnAI/EchoLearn/api"
+	"github.com/EchoLearnAI/EchoLearn/config"
+	"github.com/EchoLearnAI/EchoLearn/data"
+	"github.com/EchoLearnAI/EchoLearn/db"
 
 	"github.com/gin-gonic/gin"
 )

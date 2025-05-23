@@ -2,29 +2,33 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/yourusername/echolearn/api/handlers"
-	// Import swagger files if you have them: "github.com/swaggo/gin-swagger"
-	// "github.com/swaggo/files"
-	// _ "github.com/yourusername/echolearn/docs" // docs is required for Swag
+	"github.com/EchoLearnAI/EchoLearn/api/handlers"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	swaggerFiles "github.com/swaggo/files"
+	_ "github.com/EchoLearnAI/EchoLearn/docs" // docs is required for Swag
 )
 
-// SetupRouter configures the Gin router with all API routes.
-// @title EchoLearn API
-// @version 1.0
-// @description This is the API for the EchoLearn English learning app.
-// @termsOfService http://swagger.io/terms/
-// @contact.name API Support
-// @contact.url http://www.swagger.io/support
-// @contact.email support@swagger.io
-// @license.name Apache 2.0
-// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
-// @host localhost:8080
-// @BasePath /api/v1
+SetupRouter configures the Gin router with all API routes.
+@title EchoLearn API
+@version 1.0
+@description This is the API for the EchoLearn English learning app.
+@termsOfService http://swagger.io/terms/
+@contact.name API Support
+@contact.url http://www.swagger.io/support
+@contact.email support@swagger.io
+@license.name Apache 2.0
+@license.url http://www.apache.org/licenses/LICENSE-2.0.html
+@host localhost:8080
+@BasePath /api/v1
+
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 
 	// TODO: Add CORS middleware if React Native app is served from a different origin during dev
 	// r.Use(cors.Default()) // Example: gin-contrib/cors
+
+	// Swagger endpoint
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	apiv1 := r.Group("/api/v1")
 	{
@@ -52,9 +56,6 @@ func SetupRouter() *gin.Engine {
 			sessionRoutes.GET("/:id/summary", handlers.GetSessionSummary)
 		}
 	}
-
-	// Swagger endpoint (optional, requires swaggo/gin-swagger)
-	// r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	return r
 } 

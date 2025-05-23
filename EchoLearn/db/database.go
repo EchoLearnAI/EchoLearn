@@ -5,7 +5,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/yourusername/echolearn/models"
+	"github.com/EchoLearnAI/EchoLearn/models"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"

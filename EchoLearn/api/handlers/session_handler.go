@@ -6,10 +6,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/yourusername/echolearn/db"
-	"github.com/yourusername/echolearn/models"
-	"github.com/yourusername/echolearn/utils"
-	"gorm.io/gorm"
+	"github.com/EchoLearnAI/EchoLearn/db"
+	"github.com/EchoLearnAI/EchoLearn/models"
+	"github.com/EchoLearnAI/EchoLearn/utils"
 )
 
 // StartSessionRequest defines the expected body for starting a new session.

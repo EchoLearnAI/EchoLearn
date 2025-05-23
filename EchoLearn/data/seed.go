@@ -2,11 +2,12 @@ package data
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"log"
 	"os"
 
-	"github.com/yourusername/echolearn/models"
+	"github.com/EchoLearnAI/EchoLearn/models"
 	"gorm.io/gorm"
 )
 
@@ -55,12 +56,12 @@ func Seed(db *gorm.DB) {
 		var grammarRule models.GrammarRule
 		err := db.Where("title = ?", q.GrammarRule.Title).First(&grammarRule).Error
 		
-		if err != nil && !gorm.IsRecordNotFoundError(err) {
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			log.Printf("Error checking grammar rule %s: %v. Skipping question: %s", q.GrammarRule.Title, err, q.Text)
 			continue
 		}
 
-		if gorm.IsRecordNotFoundError(err) {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 		    log.Printf("Creating new grammar rule: %s", q.GrammarRule.Title)
 			newRule := models.GrammarRule{
 				Title:       q.GrammarRule.Title,
