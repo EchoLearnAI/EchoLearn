@@ -2,18 +2,19 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/EchoLearnAI/EchoLearn/db"
 	"github.com/EchoLearnAI/EchoLearn/models"
 	"github.com/EchoLearnAI/EchoLearn/utils"
+	"github.com/gin-gonic/gin"
 )
 
 // StartSessionRequest defines the expected body for starting a new session.
 type StartSessionRequest struct {
-	UserID string           `json:"user_id" binding:"required"`
+	UserID string          `json:"user_id" binding:"required"`
 	Mode   models.GameMode `json:"mode" binding:"required"`
 }
 
@@ -58,24 +59,42 @@ func StartSession(c *gin.Context) {
 
 	// Create new game session
 	newSession := models.GameSession{
-		UserID: req.UserID,
-		Mode:   req.Mode,
-		// AnsweredQuestionsJSON will be initialized as an empty array string
+		UserID:                req.UserID,
+		Mode:                  req.Mode,
+		IsActive:              true,       // A new session should be active
+		StartedAt:             time.Now(), // Record start time
 		AnsweredQuestionsJSON: "[]",
 	}
 
 	switch req.Mode {
-	case models.SurvivalMode:
+	case models.GameModeMistakes:
 		newSession.MaxMistakes = 3
-	case models.FiveTopicMode:
-		newSession.TotalQuestions = 50 // 10 questions per 5 topics (simplified for MVP)
-		// Logic for selecting questions for 5-topic mode would go here.
-		// For MVP, we might just pull random questions up to TotalQuestions as they are requested.
-	case models.InfiniteMode:
-		// No specific setup needed beyond base
+	case models.GameModeCategoryChallenge:
+		// Future: if req contains CategoryName, store it on newSession (model needs CategoryName field)
+		// and the question fetching logic below should respect it.
+		break
+	case models.GameModeInfinite:
+		break
 	default:
-		utils.BadRequest(c, "Invalid game mode specified")
+		utils.BadRequest(c, "Invalid game mode specified: "+string(req.Mode))
 		return
+	}
+
+	// Attempt to set an initial question for the session
+	var firstQuestion models.Question
+	// For simplicity, pick any random question.
+	// TODO: For CategoryChallenge, this should be filtered by category if category is part of StartSessionRequest.
+	if err := dbInstance.Order("RANDOM()").First(&firstQuestion).Error; err != nil {
+		if !db.IsErrNotFound(err) { // If it's any error other than "not found"
+			utils.InternalServerError(c, "Failed to fetch initial question: "+err.Error())
+			return
+		}
+		// If no questions found, CurrentQuestionID will remain empty.
+		// The frontend should handle this (e.g., "No questions available for this mode").
+		// Or, we could prevent session creation if no questions exist.
+		log.Println("StartSession: No questions found in DB to assign as first question.")
+	} else {
+		newSession.CurrentQuestionID = firstQuestion.ID
 	}
 
 	if err := dbInstance.Create(&newSession).Error; err != nil {
@@ -162,12 +181,12 @@ func SubmitAnswer(c *gin.Context) {
 	}
 
 	answerDetail := models.AnsweredQuestionDetail{
-		QuestionID:      question.ID,
-		QuestionText:    question.Text,
+		QuestionID:       question.ID,
+		QuestionText:     question.Text,
 		SelectedOptionID: selectedOption.ID,
-		CorrectOptionID: correctOption.ID,
-		IsCorrect:       isCorrect,
-		Explanation:     correctOption.Explanation, // Provide explanation of the correct answer
+		CorrectOptionID:  correctOption.ID,
+		IsCorrect:        isCorrect,
+		Explanation:      correctOption.Explanation, // Provide explanation of the correct answer
 	}
 	answeredQuestions = append(answeredQuestions, answerDetail)
 
@@ -179,26 +198,62 @@ func SubmitAnswer(c *gin.Context) {
 	session.AnsweredQuestionsJSON = string(updatedAnswersJSON)
 	session.CurrentQuestion++ // Increment question count for all modes
 
-	// Check game mode specific end conditions
+	// Default to session still being active
 	sessionActive := true
+
+	// If session is still considered active, try to get a next question
+	if session.IsActive { // Check if session is still active before attempting to fetch next question
+		var nextQuestion models.Question
+		// Exclude already answered questions if possible (more complex, for future)
+		// For now, just get any random question not the current one (if possible)
+		// This query attempts to get a random question that is not the one just answered.
+		// If only one question exists, this might still return the same one or none if we strictly exclude.
+		// A more robust solution would involve tracking all answered questions in the session.
+		query := dbInstance.Order("RANDOM()")
+		if req.QuestionID != "" { // req.QuestionID is the question just answered
+			query = query.Not("id = ?", req.QuestionID)
+		}
+
+		err := query.First(&nextQuestion).Error
+		if err != nil {
+			if db.IsErrNotFound(err) {
+				// No more questions available
+				log.Printf("SubmitAnswer: No next question found for session %s. Ending session.", session.ID)
+				session.IsActive = false
+				session.EndedAt = time.Now()
+				sessionActive = false          // Update local variable to reflect session ended
+				session.CurrentQuestionID = "" // Clear current question ID
+			} else {
+				utils.InternalServerError(c, "Error fetching next question: "+err.Error())
+				return
+			}
+		} else {
+			session.CurrentQuestionID = nextQuestion.ID
+		}
+	}
+
+	// Check game mode specific end conditions
 	switch session.Mode {
-	case models.SurvivalMode:
+	case models.GameModeMistakes:
 		if session.MistakesMade >= session.MaxMistakes {
 			session.IsActive = false
 			session.EndedAt = time.Now()
 			sessionActive = false
 		}
-	case models.FiveTopicMode:
-		if session.CurrentQuestion >= session.TotalQuestions {
-			session.IsActive = false
-			session.EndedAt = time.Now()
-			sessionActive = false
-		}
-	case models.InfiniteMode:
+	case models.GameModeCategoryChallenge:
+		// Add end conditions for Category Challenge if applicable (e.g., number of questions)
+		// if session.CurrentQuestion >= session.TotalQuestions { ... }
+		break
+	case models.GameModeInfinite:
 		// Infinite mode only ends via a separate API call (e.g., /session/finish) or client-side decision.
 		// For MVP, we'll assume it continues until client stops or can add a manual Finish endpoint later.
 		// If user wants to finish Infinite mode, they can tap Finish, which can then make a call to /session/:id/summary to end implicitly
 		// Or we could add an explicit /session/:id/finish endpoint
+
+		// If session was marked inactive due to no more questions (above), ensure IsActive is false.
+		if !session.IsActive { // This check handles the case where no more questions were found for infinite mode
+			sessionActive = false
+		}
 		break
 	}
 
@@ -208,11 +263,11 @@ func SubmitAnswer(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"result":          isCorrect,
-		"session_active":  sessionActive,
-		"session_details": session,
+		"result":            isCorrect,
+		"session_active":    sessionActive,
+		"session_details":   session,
 		"correct_option_id": correctOption.ID,
-		"explanation": correctOption.Explanation, // Provide immediate feedback
+		"explanation":       correctOption.Explanation, // Provide immediate feedback
 	})
 }
 
@@ -243,7 +298,7 @@ func GetSessionSummary(c *gin.Context) {
 	// If the session is infinite and still active, the client might be calling this to "finish" it.
 	// Or, it's just a request for an interim summary.
 	// For MVP, if it's an infinite mode and still marked active, we can mark it as ended now.
-	if session.Mode == models.InfiniteMode && session.IsActive {
+	if session.Mode == models.GameModeInfinite && session.IsActive {
 		session.IsActive = false
 		session.EndedAt = time.Now()
 		if err := dbInstance.Save(&session).Error; err != nil {
@@ -262,4 +317,4 @@ func GetSessionSummary(c *gin.Context) {
 		"session":            session,
 		"answered_questions": answeredQuestions,
 	})
-} 
+}

@@ -1,5 +1,29 @@
 basePath: /api/v1
 definitions:
+  handlers.CreateUserRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  handlers.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
   handlers.StartSessionRequest:
     properties:
       mode:
@@ -132,7 +156,6 @@ definitions:
       created_at:
         type: string
       email:
-        description: Optional
         type: string
       id:
         type: string
@@ -141,6 +164,11 @@ definitions:
       progress:
         description: Simple JSON string for progress
         type: string
+      sessions:
+        description: User can have multiple game sessions
+        items:
+          $ref: '#/definitions/models.GameSession'
+        type: array
       updated_at:
         type: string
     type: object
@@ -159,7 +187,7 @@ info:
     email: support@swagger.io
     name: API Support
     url: http://www.swagger.io/support
-  description: API for EchoLearn English learning app.
+  description: This is the API for the EchoLearn English learning application.
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
@@ -167,6 +195,44 @@ info:
   title: EchoLearn API
   version: "1.0"
 paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a user with email and password.
+      parameters:
+      - description: User login credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully logged in
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Invalid request payload or validation error
+          schema:
+            $ref: '#/definitions/utils.APIError'
+        "401":
+          description: Invalid email or password
+          schema:
+            $ref: '#/definitions/utils.APIError'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/utils.APIError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/utils.APIError'
+      summary: Log in a user
+      tags:
+      - auth
   /questions:
     post:
       consumes:
@@ -381,27 +447,31 @@ paths:
     post:
       consumes:
       - application/json
-      description: Add a new user to the system
+      description: Creates a new user with name, email, and password.
       parameters:
-      - description: User info
+      - description: User creation request
         in: body
         name: user
         required: true
         schema:
-          $ref: '#/definitions/models.User'
+          $ref: '#/definitions/handlers.CreateUserRequest'
       produces:
       - application/json
       responses:
         "201":
-          description: Created
+          description: Successfully created user
           schema:
             $ref: '#/definitions/models.User'
         "400":
-          description: Invalid input
+          description: Invalid request payload or validation error
+          schema:
+            $ref: '#/definitions/utils.APIError'
+        "409":
+          description: Email already exists
           schema:
             $ref: '#/definitions/utils.APIError'
         "500":
-          description: Server error
+          description: Internal server error
           schema:
             $ref: '#/definitions/utils.APIError'
       summary: Create a new user
@@ -409,9 +479,10 @@ paths:
       - users
   /users/{id}:
     get:
-      description: Retrieve user details by their ID
+      description: Retrieves user details for a given user ID.
       parameters:
       - description: User ID
+        format: uuid
         in: path
         name: id
         required: true
@@ -420,18 +491,25 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Successfully retrieved user
           schema:
             $ref: '#/definitions/models.User'
+        "400":
+          description: Invalid user ID format
+          schema:
+            $ref: '#/definitions/utils.APIError'
         "404":
           description: User not found
           schema:
             $ref: '#/definitions/utils.APIError'
         "500":
-          description: Server error
+          description: Internal server error
           schema:
             $ref: '#/definitions/utils.APIError'
       summary: Get a user by ID
       tags:
       - users
+schemes:
+- http
+- https
 swagger: "2.0"

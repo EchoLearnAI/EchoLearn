@@ -14,8 +14,15 @@ export const UserProvider = ({ children }) => {
     try {
       const storedUserId = localStorage.getItem('echolearn_userId');
       if (storedUserId) {
-        const fetchedUser = await getUserById(storedUserId);
-        setUser(fetchedUser.data || fetchedUser); // Adjust based on your API response structure
+        const fetchedUserResponse = await getUserById(storedUserId);
+        // API returns { data: userObject }, so we use fetchedUserResponse.data
+        if (fetchedUserResponse && fetchedUserResponse.data) {
+          setUser(fetchedUserResponse.data);
+        } else {
+          setUser(null); // Or handle as an error if data is expected
+          console.warn('User data not found in response after fetching by ID');
+          localStorage.removeItem('echolearn_userId');
+        }
       } else {
         setUser(null);
       }
@@ -34,35 +41,45 @@ export const UserProvider = ({ children }) => {
   }, [loadUserFromStorage]);
 
   const login = useCallback((userData) => {
-    // userData could be the full user object from createUser or just { ID: ... }
+    // userData is expected to be the user object { id: ..., name: ... }
     setUser(userData);
-    localStorage.setItem('echolearn_userId', userData.ID);
+    if (userData && userData.id) {
+      localStorage.setItem('echolearn_userId', userData.id);
+    } else {
+      console.warn('Login called with userData missing an id:', userData);
+    }
     setUserError(null);
   }, []);
 
   const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem('echolearn_userId');
-    // Potentially clear session context as well, or handle that in SessionProvider
     setUserError(null);
-    // Maybe redirect to login page: navigate('/'); or handle in component
   }, []);
 
-  // Function to refresh user data if needed
   const refreshUser = useCallback(async () => {
-    if (user && user.ID) {
+    if (user && user.id) { // Use lowercase 'id'
       setIsLoadingUser(true);
       try {
-        const fetchedUser = await getUserById(user.ID);
-        setUser(fetchedUser.data || fetchedUser);
+        const fetchedUserResponse = await getUserById(user.id); // Use lowercase 'id'
+        // API returns { data: userObject }, so we use fetchedUserResponse.data
+        if (fetchedUserResponse && fetchedUserResponse.data) {
+          setUser(fetchedUserResponse.data);
+        } else {
+          console.warn('User data not found in response during refreshUser');
+          // Optionally logout or set error if user becomes invalid
+          setUser(null); 
+          localStorage.removeItem('echolearn_userId');
+        }
         setUserError(null);
       } catch (error) {
         console.error('Failed to refresh user:', error);
         setUserError(error);
-        // Potentially log out user if refresh fails critically
       } finally {
         setIsLoadingUser(false);
       }
+    } else if (user) { // User exists but user.id is missing for some reason
+        console.warn("RefreshUser called when user object is missing an id:", user);
     }
   }, [user]);
 

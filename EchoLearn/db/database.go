@@ -143,6 +143,31 @@ func CloseTestDB(testDb *gorm.DB) {
 
 // Check if the database file exists
 func DatabaseExists(filePath string) bool {
-    _, err := os.Stat(filePath)
-    return !os.IsNotExist(err)
-} 
+	_, err := os.Stat(filePath)
+	return !os.IsNotExist(err)
+}
+
+// IsUniqueConstraintError checks if the error is a GORM unique constraint violation.
+// For SQLite, this typically involves checking the error message string.
+func IsUniqueConstraintError(err error, fieldName string) bool {
+	if err == nil {
+		return false
+	}
+	// Example for SQLite: "UNIQUE constraint failed: users.email"
+	// This check might need to be more robust or specific to the DB driver if not SQLite.
+	// For gorm, a more direct way might be to check for specific error types if the driver provides them.
+	// However, string checking is common for SQLite unique constraints via GORM.
+	return содержит(err.Error(), "UNIQUE constraint failed") && (fieldName == "" || содержит(err.Error(), fieldName))
+}
+
+// Helper for IsUniqueConstraintError, replace with strings.Contains for non-test env
+func содержит(s, substr string) bool {
+	// In a real scenario, import "strings" and use strings.Contains(s, substr)
+	// For this environment, implementing a basic version to avoid new import issues.
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}

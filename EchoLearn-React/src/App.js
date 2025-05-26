@@ -1,45 +1,87 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import React, { useContext } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import GlobalStyle from './styles/GlobalStyle';
 import theme from './styles/theme';
-import { UserProvider } from './contexts/UserContext';
+import UserContext, { UserProvider } from './contexts/UserContext';
 import { SessionProvider } from './contexts/SessionContext';
 
-// Page Components
 import HomePage from './pages/HomePage';
 import CreateUserPage from './pages/CreateUserPage';
+import LoginPage from './pages/LoginPage';
 import QuizPage from './pages/QuizPage';
 import SummaryPage from './pages/SummaryPage';
+// import NotFoundPage from './pages/NotFoundPage'; 
 
-// Placeholder pages (we will create these later in src/pages/)
-// const HomePage = () => <div><h1>Home Page</h1><nav><Link to="/create-user">Create User</Link> | <Link to="/quiz">Start Quiz</Link></nav></div>; // Replaced
-// const QuizPage = () => <div><h1>Quiz Page</h1><p>Quiz interface will be here.</p><Link to="/">Go Home</Link> | <Link to="/summary/123">Go to Summary (Test)</Link></div>; // Replaced
-// const SummaryPage = () => <div><h1>Summary Page</h1><p>Session summary will be here.</p><Link to="/">Go Home</Link></div>; // Replaced
-const NotFoundPage = () => (
-  <div style={{ textAlign: 'center', marginTop: '50px' }}>
-    <h1>404 - Page Not Found</h1>
-    <p>Sorry, the page you are looking for does not exist.</p>
-    <Link to="/">Go Home</Link>
-  </div>
-);
+// Layout for routes that require authentication
+const ProtectedLayout = () => {
+  const { user, isLoadingUser } = useContext(UserContext);
+
+  if (isLoadingUser) {
+    return <div>Loading user session...</div>; // Or a global loader
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <Outlet />; // Renders the child route element
+};
+
+// Layout for public routes like Login and Create User
+// Redirects to home if user is already logged in
+const PublicLayout = () => {
+  const { user, isLoadingUser } = useContext(UserContext);
+
+  if (isLoadingUser) {
+    return <div>Loading...</div>; // Or a global loader
+  }
+
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <Outlet />; // Renders the child route element (LoginPage or CreateUserPage)
+};
+
+function AppContent() {
+  return (
+    <Router>
+      <GlobalStyle />
+      <SessionProvider> {/* SessionProvider can stay here */}
+        <Routes>
+          {/* Public Routes (Login, Create User) */}
+          <Route element={<PublicLayout />}>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/create-user" element={<CreateUserPage />} />
+          </Route>
+
+          {/* Protected Routes */}
+          <Route element={<ProtectedLayout />}>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/quiz" element={<QuizPage />} />
+            <Route path="/summary/:sessionId" element={<SummaryPage />} />
+            {/* Add other protected routes here */}
+          </Route>
+
+          {/* Fallback: if no routes match and user is not caught by public/protected layouts,
+              it implies an issue or a need for a more specific 404 page. 
+              For now, if not user, ProtectedLayout sends to /login.
+              If user, and no path matches, redirect to home. Or show NotFoundPage.
+           */}
+          <Route path="*" element={<Navigate to="/" replace />} /> 
+          {/* Or a more specific NotFoundPage: <Route path="*" element={<NotFoundPage />} /> */}
+        </Routes>
+      </SessionProvider>
+    </Router>
+  );
+}
 
 function App() {
   return (
     <ThemeProvider theme={theme}>
-      <GlobalStyle />
       <UserProvider>
-        <SessionProvider>
-          <Router>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/create-user" element={<CreateUserPage />} />
-              <Route path="/quiz" element={<QuizPage />} />
-              <Route path="/summary/:sessionId" element={<SummaryPage />} />
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
-          </Router>
-        </SessionProvider>
+        <AppContent />
       </UserProvider>
     </ThemeProvider>
   );

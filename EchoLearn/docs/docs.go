@@ -24,6 +24,64 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/auth/login": {
+            "post": {
+                "description": "Authenticates a user with email and password.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Log in a user",
+                "parameters": [
+                    {
+                        "description": "User login credentials",
+                        "name": "credentials",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully logged in",
+                        "schema": {
+                            "$ref": "#/definitions/models.User"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request payload or validation error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid email or password",
+                        "schema": {
+                            "$ref": "#/definitions/utils.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/utils.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.APIError"
+                        }
+                    }
+                }
+            }
+        },
         "/questions": {
             "post": {
                 "description": "Adds a new question to the database. Requires admin privileges (not implemented in MVP).",
@@ -336,7 +394,7 @@ const docTemplate = `{
         },
         "/users": {
             "post": {
-                "description": "Add a new user to the system",
+                "description": "Creates a new user with name, email, and password.",
                 "consumes": [
                     "application/json"
                 ],
@@ -349,30 +407,36 @@ const docTemplate = `{
                 "summary": "Create a new user",
                 "parameters": [
                     {
-                        "description": "User info",
+                        "description": "User creation request",
                         "name": "user",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.User"
+                            "$ref": "#/definitions/handlers.CreateUserRequest"
                         }
                     }
                 ],
                 "responses": {
                     "201": {
-                        "description": "Created",
+                        "description": "Successfully created user",
                         "schema": {
                             "$ref": "#/definitions/models.User"
                         }
                     },
                     "400": {
-                        "description": "Invalid input",
+                        "description": "Invalid request payload or validation error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.APIError"
+                        }
+                    },
+                    "409": {
+                        "description": "Email already exists",
                         "schema": {
                             "$ref": "#/definitions/utils.APIError"
                         }
                     },
                     "500": {
-                        "description": "Server error",
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/utils.APIError"
                         }
@@ -382,7 +446,7 @@ const docTemplate = `{
         },
         "/users/{id}": {
             "get": {
-                "description": "Retrieve user details by their ID",
+                "description": "Retrieves user details for a given user ID.",
                 "produces": [
                     "application/json"
                 ],
@@ -393,6 +457,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "format": "uuid",
                         "description": "User ID",
                         "name": "id",
                         "in": "path",
@@ -401,9 +466,15 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Successfully retrieved user",
                         "schema": {
                             "$ref": "#/definitions/models.User"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid user ID format",
+                        "schema": {
+                            "$ref": "#/definitions/utils.APIError"
                         }
                     },
                     "404": {
@@ -413,7 +484,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Server error",
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/utils.APIError"
                         }
@@ -423,6 +494,41 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "handlers.CreateUserRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "name",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 8
+                }
+            }
+        },
+        "handlers.LoginRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
         "handlers.StartSessionRequest": {
             "type": "object",
             "required": [
@@ -617,7 +723,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "email": {
-                    "description": "Optional",
                     "type": "string"
                 },
                 "id": {
@@ -629,6 +734,13 @@ const docTemplate = `{
                 "progress": {
                     "description": "Simple JSON string for progress",
                     "type": "string"
+                },
+                "sessions": {
+                    "description": "User can have multiple game sessions",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GameSession"
+                    }
                 },
                 "updated_at": {
                     "type": "string"
@@ -657,9 +769,9 @@ var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "localhost:8080",
 	BasePath:         "/api/v1",
-	Schemes:          []string{},
+	Schemes:          []string{"http", "https"},
 	Title:            "EchoLearn API",
-	Description:      "API for EchoLearn English learning app.",
+	Description:      "This is the API for the EchoLearn English learning application.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

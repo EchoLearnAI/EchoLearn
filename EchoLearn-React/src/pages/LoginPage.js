@@ -1,8 +1,8 @@
 import React, { useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import styled from 'styled-components';
 import UserContext from '../contexts/UserContext';
-import { createUser as apiCreateUser } from '../api/userService';
+import { loginUser } from '../api/authService'; // We'll create this service and function
 
 const PageContainer = styled.div`
   display: flex;
@@ -84,11 +84,9 @@ const LinkText = styled.p`
   }
 `;
 
-const CreateUserPage = () => {
-  const [name, setName] = useState('');
+function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useContext(UserContext);
@@ -97,51 +95,35 @@ const CreateUserPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
-    if (!name.trim() || !email.trim() || !password || !confirmPassword) {
-      setError('All fields are required.');
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-    if (password.length < 8) {
-        setError('Password must be at least 8 characters long.');
-        return;
-    }
-
     setIsLoading(true);
+
+    if (!email.trim() || !password.trim()) {
+      setError('Email and Password are required.');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      // Ensure createUser API service now expects { name, email, password }
-      const user = await apiCreateUser({ name, email, password });
-      if (user && user.id) { // Assuming API returns user object directly (service might wrap/unwrap)
+      const user = await loginUser({ email, password });
+      if (user && user.id) { // Assuming API returns user object directly
         login(user); // UserContext.login expects the user object
-        navigate('/');
+        navigate('/'); // Navigate to home or dashboard
       } else {
-        // This case might occur if createUser doesn't throw for non-2xx but returns something falsy/without id
-        setError('Failed to create user. Please try again.');
+        setError('Login failed. Please check your credentials.');
       }
     } catch (err) {
       const errorMessage = err.response?.data?.message || err.response?.data?.details || err.message || 'An unexpected error occurred.';
-      setError(`Registration failed: ${errorMessage}`);
-      console.error('Create user error:', err.response || err);
+      setError(`Login failed: ${errorMessage}`);
+      console.error('Login error:', err.response || err);
     }
-      setIsLoading(false);
+    setIsLoading(false);
   };
 
   return (
     <PageContainer>
       <Form onSubmit={handleSubmit}>
-        <Title>Create Account</Title>
+        <Title>Login to EchoLearn</Title>
         {error && <ErrorMessage>{error}</ErrorMessage>}
-        <Input
-          type="text"
-          placeholder="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          disabled={isLoading}
-        />
         <Input
           type="email"
           placeholder="Email"
@@ -151,27 +133,20 @@ const CreateUserPage = () => {
         />
         <Input
           type="password"
-          placeholder="Password (min 8 characters)"
+          placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           disabled={isLoading}
         />
-        <Input
-          type="password"
-          placeholder="Confirm Password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          disabled={isLoading}
-        />
         <Button type="submit" disabled={isLoading}>
-          {isLoading ? 'Creating Account...' : 'Create Account'}
+          {isLoading ? 'Logging In...' : 'Login'}
         </Button>
         <LinkText>
-          Already have an account? <a href="/login">Login here</a>
+          Don't have an account? <Link to="/create-user">Create one</Link>
         </LinkText>
       </Form>
     </PageContainer>
   );
-};
+}
 
-export default CreateUserPage; 
+export default LoginPage; 

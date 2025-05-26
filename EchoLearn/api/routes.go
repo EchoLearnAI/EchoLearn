@@ -1,21 +1,21 @@
 package api
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/EchoLearnAI/EchoLearn/api/handlers"
-	ginSwagger "github.com/swaggo/gin-swagger"
-	swaggerFiles "github.com/swaggo/files"
 	_ "github.com/EchoLearnAI/EchoLearn/docs" // docs is required for Swag
+	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-// SetupRouter configures the Gin router with all API routes.
-func SetupRouter() *gin.Engine {
+// SetupRouter configures the Gin router with all API routes and applies CORS.
+func SetupRouter(corsMW gin.HandlerFunc) *gin.Engine {
 	r := gin.Default()
 
-	// TODO: Add CORS middleware if React Native app is served from a different origin during dev
-	// r.Use(cors.Default()) // Example: gin-contrib/cors
+	// Apply CORS middleware first
+	r.Use(corsMW)
 
-	// Swagger endpoint
+	// Swagger endpoint - must be defined AFTER CORS if it needs to be accessible cross-origin
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	apiv1 := r.Group("/api/v1")
@@ -43,7 +43,13 @@ func SetupRouter() *gin.Engine {
 			sessionRoutes.POST("/submit", handlers.SubmitAnswer)
 			sessionRoutes.GET("/:id/summary", handlers.GetSessionSummary)
 		}
+
+		// Auth routes
+		authRoutes := apiv1.Group("/auth")
+		{
+			authRoutes.POST("/login", handlers.Login) // New login route
+		}
 	}
 
 	return r
-} 
+}
