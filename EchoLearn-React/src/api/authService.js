@@ -10,6 +10,7 @@ import apiClient from './apiClient';
 export const loginUser = async (credentials) => {
   try {
     const response = await apiClient.post('/auth/login', credentials);
+    console.log('SessionContext: currentSession after startNewSession:', response.data.data);
     return response.data.data; // Assuming backend returns { data: userObject }
   } catch (error) {
     console.error('Error logging in user:', error.response ? error.response.data : error.message);
