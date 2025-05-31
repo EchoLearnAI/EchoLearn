@@ -17,9 +17,10 @@ interface Question {
 }
 
 interface QuestionScreenProps {
-  selectedDifficulty: string;
-  selectedTopic: string;
+  difficulty: string;
+  topic: string;
   onQuizComplete: (score: number, totalQuestions: number) => void;
+  token: string | null;
 }
 
 // Define the expected structure of the API response from /submit
@@ -30,7 +31,7 @@ interface SubmitResponse {
     options: Option[]; // Array of all options with their details
 }
 
-const QuestionScreen: React.FC<QuestionScreenProps> = ({ selectedDifficulty, selectedTopic, onQuizComplete }) => {
+const QuestionScreen: React.FC<QuestionScreenProps> = ({ difficulty, topic, onQuizComplete, token }) => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswerId, setSelectedAnswerId] = useState<string | null>(null);
@@ -42,7 +43,7 @@ const QuestionScreen: React.FC<QuestionScreenProps> = ({ selectedDifficulty, sel
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
-        const response = await fetch(`http://localhost:8080/api/v1/questions/${selectedDifficulty}/${selectedTopic}`);
+        const response = await fetch(`http://localhost:8080/api/v1/questions/${difficulty}/${topic}`);
         if (!response.ok) {
           throw new Error('Network response was not ok');
         }
@@ -62,7 +63,7 @@ const QuestionScreen: React.FC<QuestionScreenProps> = ({ selectedDifficulty, sel
       }
     };
     fetchQuestions();
-  }, [selectedDifficulty, selectedTopic]);
+  }, [difficulty, topic]);
 
   const handleAnswerSubmit = async () => {
     if (!selectedAnswerId || !questions[currentQuestionIndex]) return;

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 
 interface TopicScreenProps {
-  selectedDifficulty: string;
+  difficulty: string;
   onSelectTopic: (topic: string) => void;
+  onBack: () => void;
 }
 
-const TopicScreen: React.FC<TopicScreenProps> = ({ selectedDifficulty, onSelectTopic }) => {
+const TopicScreen: React.FC<TopicScreenProps> = ({ difficulty, onSelectTopic, onBack }) => {
   const [topics, setTopics] = useState<string[]>([]);
 
   useEffect(() => {
@@ -36,7 +37,7 @@ const TopicScreen: React.FC<TopicScreenProps> = ({ selectedDifficulty, onSelectT
 
   return (
     <div className="screen-container">
-      <h1>Choose Topic for {selectedDifficulty.charAt(0).toUpperCase() + selectedDifficulty.slice(1)}</h1>
+      <h1>Choose Topic for {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}</h1>
       {topics.length === 0 ? (
         <p>Loading topics...</p>
       ) : (

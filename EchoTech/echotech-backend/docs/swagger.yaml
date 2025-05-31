@@ -1,5 +1,16 @@
 basePath: /api/v1
 definitions:
+  main.AuthCredentials:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 6
+        type: string
+    required:
+    - email
+    - password
+    type: object
   main.Option:
     properties:
       explanation:
@@ -26,6 +37,44 @@ definitions:
       topic:
         type: string
     type: object
+  main.ScoreDTO:
+    properties:
+      attemptedAt:
+        type: string
+      createdAt:
+        type: string
+      difficulty:
+        type: string
+      id:
+        type: integer
+      points:
+        type: integer
+      topic:
+        type: string
+      total:
+        type: integer
+      updatedAt:
+        type: string
+      userId:
+        type: integer
+    type: object
+  main.ScoreSubmission:
+    properties:
+      difficulty:
+        type: string
+      points:
+        minimum: 0
+        type: integer
+      topic:
+        type: string
+      total:
+        type: integer
+    required:
+    - difficulty
+    - points
+    - topic
+    - total
+    type: object
   main.SubmitAnswerBody:
     properties:
       answerId:
@@ -47,6 +96,83 @@ info:
   title: EchoTech API
   version: "1.0"
 paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a user and returns a JWT
+      parameters:
+      - description: User login credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/main.AuthCredentials'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Login successful, token provided
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid input or invalid credentials
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Invalid credentials
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login an existing user
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user account
+      parameters:
+      - description: User registration credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/main.AuthCredentials'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User created successfully (userId in response)
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid input or user already exists
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register a new user
+      tags:
+      - auth
   /difficulties:
     get:
       consumes:
@@ -113,6 +239,48 @@ paths:
       summary: Get questions by difficulty and topic
       tags:
       - quiz
+  /scores:
+    post:
+      consumes:
+      - application/json
+      description: Saves a quiz score for the authenticated user
+      parameters:
+      - description: Score details
+        in: body
+        name: score
+        required: true
+        schema:
+          $ref: '#/definitions/main.ScoreSubmission'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Score saved successfully
+          schema:
+            $ref: '#/definitions/main.ScoreDTO'
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Submit a user's quiz score
+      tags:
+      - scores
   /submit:
     post:
       consumes:
@@ -155,4 +323,39 @@ paths:
       summary: Get available topics
       tags:
       - quiz
+  /users/me/scores:
+    get:
+      description: Retrieves all quiz scores for the currently logged-in user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of user scores
+          schema:
+            items:
+              $ref: '#/definitions/main.ScoreDTO'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get scores for the authenticated user
+      tags:
+      - scores
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

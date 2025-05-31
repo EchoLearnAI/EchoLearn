@@ -25,23 +25,49 @@ import (
 // @host localhost:8080
 // @BasePath /api/v1
 func main() {
+	// Load .env file if it exists (for local development)
+	// You would typically use a library like godotenv for this
+	// For simplicity, we'll assume env vars are set externally or defaults are fine for now
+
+	ConnectDatabase() // Initialize DB connection
+
 	r := gin.Default()
 
 	// Enable CORS
 	r.Use(CORSMiddleware())
 
-	// Routes
-	v1 := r.Group("/api/v1")
+	// Public quiz routes (no auth needed)
+	quizRoutes := r.Group("/api/v1")
 	{
-		v1.GET("/ping", Ping)
-		v1.GET("/difficulties", GetDifficulties)
-		v1.GET("/topics", GetTopics)
-		v1.GET("/questions/:difficulty/:topic", GetQuestionsByDifficultyAndTopic)
-		v1.POST("/submit", SubmitAnswer) // Assuming we might want to submit answers one by one or all at once
+		quizRoutes.GET("/ping", Ping)
+		quizRoutes.GET("/difficulties", GetDifficulties)
+		quizRoutes.GET("/topics", GetTopics)
+		quizRoutes.GET("/questions/:difficulty/:topic", GetQuestionsByDifficultyAndTopic)
+		quizRoutes.POST("/submit", SubmitAnswer) // This is quiz submission, not score persistence
+	}
+
+	// Auth routes
+	authRoutes := r.Group("/api/v1/auth")
+	{
+		authRoutes.POST("/register", Register)
+		authRoutes.POST("/login", Login)
+	}
+
+	// Authenticated routes for scores
+	protectedRoutes := r.Group("/api/v1")
+	protectedRoutes.Use(AuthMiddleware(jwtKey)) // Apply JWT middleware, passing the key
+	{
+		protectedRoutes.POST("/scores", SubmitScore)           // To save a new score after a quiz
+		protectedRoutes.GET("/users/me/scores", GetUserScores) // To get scores for the logged-in user
 	}
 
 	// Swagger
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	// Add security definitions for Swagger UI
+	// @securityDefinitions.apikey BearerAuth
+	// @in header
+	// @name Authorization
+	// @description Type "Bearer" followed by a space and JWT token.
 
 	r.Run(":8080") // listen and serve on 0.0.0.0:8080
 }

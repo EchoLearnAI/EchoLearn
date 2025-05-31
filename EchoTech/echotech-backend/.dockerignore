@@ -1,0 +1,7 @@
+.git
+.gitignore
+Dockerfile
+*.md
+# Add other files/directories to ignore if any
+# For example, local .env files if not intended to be copied directly
+# .env 

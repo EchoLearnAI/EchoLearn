@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: echotech_db
+    environment:
+      POSTGRES_USER: ${DB_USER:-echouser} # Use an env var or default
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-echopass}
+      POSTGRES_DB: ${DB_NAME:-echotechdb}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5432}:5432" # Expose DB port to host, use env var or default
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./echotech-backend
+      dockerfile: Dockerfile
+    container_name: echotech_backend_app
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      GIN_MODE: ${GIN_MODE:-release} # or debug
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-supersecretkeypleasechange}
+      DB_HOST: db # Service name of the postgres container
+      DB_USER: ${DB_USER:-echouser}
+      DB_PASSWORD: ${DB_PASSWORD:-echopass}
+      DB_NAME: ${DB_NAME:-echotechdb}
+      DB_PORT: 5432 # Port inside the docker network, not the exposed host port
+    depends_on:
+      db:
+        condition: service_healthy # Wait for db to be healthy
+    restart: unless-stopped
+    # volumes:
+      # - ./echotech-backend:/app # Optional: Mount local code for development (reflects changes)
+
+  frontend:
+    build:
+      context: ./echotech-frontend
+      dockerfile: Dockerfile
+    container_name: echotech_frontend_app
+    ports:
+      - "${FRONTEND_PORT:-3000}:80" # Map host port 3000 to Nginx container port 80
+    depends_on:
+      - backend
+    restart: unless-stopped
+    # environment:
+      # REACT_APP_API_URL: http://localhost:${APP_PORT:-8080}/api/v1 # Example if frontend needs API URL
+
+volumes:
+  postgres_data: # Persists PostgreSQL data 
