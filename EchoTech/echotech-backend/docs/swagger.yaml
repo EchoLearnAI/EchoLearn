@@ -1,0 +1,158 @@
+basePath: /api/v1
+definitions:
+  main.Option:
+    properties:
+      explanation:
+        type: string
+      id:
+        type: string
+      isCorrect:
+        type: boolean
+      text:
+        type: string
+    type: object
+  main.Question:
+    properties:
+      difficulty:
+        type: string
+      id:
+        type: string
+      options:
+        items:
+          $ref: '#/definitions/main.Option'
+        type: array
+      text:
+        type: string
+      topic:
+        type: string
+    type: object
+  main.SubmitAnswerBody:
+    properties:
+      answerId:
+        type: string
+      questionId:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is the API for the EchoTech learning platform.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: EchoTech API
+  version: "1.0"
+paths:
+  /difficulties:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of available difficulties
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                type: string
+              type: array
+            type: object
+      summary: Get available difficulties
+      tags:
+      - quiz
+  /ping:
+    get:
+      consumes:
+      - application/json
+      description: get "pong" response to check if server is alive
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Ping the server
+      tags:
+      - health
+  /questions/{difficulty}/{topic}:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of questions for a specific difficulty and topic
+      parameters:
+      - description: Difficulty level (easy, medium, hard)
+        in: path
+        name: difficulty
+        required: true
+        type: string
+      - description: Topic name
+        in: path
+        name: topic
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/main.Question'
+              type: array
+            type: object
+      summary: Get questions by difficulty and topic
+      tags:
+      - quiz
+  /submit:
+    post:
+      consumes:
+      - application/json
+      description: Submit an answer and get feedback
+      parameters:
+      - description: Submission Payload
+        in: body
+        name: submission
+        required: true
+        schema:
+          $ref: '#/definitions/main.SubmitAnswerBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Submit an answer to a question
+      tags:
+      - quiz
+  /topics:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of available topics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                type: string
+              type: array
+            type: object
+      summary: Get available topics
+      tags:
+      - quiz
+swagger: "2.0"
