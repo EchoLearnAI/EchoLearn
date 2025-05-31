@@ -1,5 +1,5 @@
 # Stage 1: Build the Go application
-FROM golang:1.22.2-alpine AS builder
+FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
 
@@ -7,7 +7,6 @@ WORKDIR /app
 COPY go.mod go.sum ./
 # Download dependencies
 RUN go mod download
-RUN go mod vendor # Added vendor step as it seemed to help with local tooling
 
 # Copy the entire source code
 COPY . .
@@ -15,7 +14,7 @@ COPY . .
 # Build the Go application
 # CGO_ENABLED=0 for a static binary, GOOS=linux to ensure Linux binary
 # -ldflags "-s -w" to strip debug information and reduce binary size
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags "-s -w" -o /echotech-backend ./...
+RUN CGO_ENABLED=0 GOOS=linux go build -mod=mod -a -installsuffix cgo -ldflags "-s -w" -o /echotech-backend .
 
 # Stage 2: Create a minimal final image
 FROM alpine:latest
