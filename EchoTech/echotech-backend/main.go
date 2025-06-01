@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -30,6 +32,7 @@ func main() {
 	// For simplicity, we'll assume env vars are set externally or defaults are fine for now
 
 	ConnectDatabase() // Initialize DB connection
+	SeedDatabase(DB)  // Seed the database with initial data
 
 	r := gin.Default()
 
@@ -41,6 +44,7 @@ func main() {
 	{
 		quizRoutes.GET("/ping", Ping)
 		quizRoutes.GET("/difficulties", GetDifficulties)
+		quizRoutes.GET("/categories", GetCategories)
 		quizRoutes.GET("/topics", GetTopics)
 		quizRoutes.GET("/questions/:difficulty/:topic", GetQuestionsByDifficultyAndTopic)
 		quizRoutes.POST("/submit", SubmitAnswer) // This is quiz submission, not score persistence
@@ -116,21 +120,54 @@ func GetDifficulties(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"difficulties": difficulties})
 }
 
-// GetTopics godoc
-// @Summary Get available topics
-// @Description Get a list of available topics
+// GetCategories godoc
+// @Summary Get all available categories
+// @Description Get a list of all quiz categories
 // @Tags quiz
 // @Accept  json
 // @Produce  json
-// @Success 200 {object} map[string][]string
+// @Success 200 {object} map[string][]CategoryDTO "List of categories"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /categories [get]
+func GetCategories(c *gin.Context) {
+	var categories []Category
+	if err := DB.Order("name asc").Find(&categories).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve categories: " + err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"categories": categories})
+}
+
+// GetTopics godoc
+// @Summary Get available topics
+// @Description Get a list of available topics, optionally filtered by category slug.
+// @Tags quiz
+// @Accept  json
+// @Produce  json
+// @Param category_slug query string false "Slug of the category to filter topics by"
+// @Success 200 {object} map[string][]TopicDTO "List of topics"
+// @Failure 404 {object} map[string]string "Category not found if category_slug is provided and invalid"
+// @Failure 500 {object} map[string]string "Internal server error"
 // @Router /topics [get]
 func GetTopics(c *gin.Context) {
-	topics := []string{
-		"Network", "Cybersecurity", "VMs", "Container", "Architecture",
-		"Databases", "Git", "Cache and CDN", "Monitoring", "Admin and Ops",
-		"Kubernetes", "Linux", "Pipelines and CI/CD", "APIs", "Terraform",
-		"Ansible", "Azure", "AWS", "GCP",
+	categorySlug := c.Query("category_slug")
+	var topics []Topic
+	query := DB.Preload("Category").Order("name asc")
+
+	if categorySlug != "" {
+		var category Category
+		if err := DB.First(&category, "slug = ?", categorySlug).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Category not found: " + categorySlug})
+			return
+		}
+		query = query.Where("category_id = ?", category.ID)
 	}
+
+	if err := query.Find(&topics).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve topics: " + err.Error()})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"topics": topics})
 }
 
@@ -146,15 +183,47 @@ func GetTopics(c *gin.Context) {
 // @Router /questions/{difficulty}/{topic} [get]
 func GetQuestionsByDifficultyAndTopic(c *gin.Context) {
 	difficulty := c.Param("difficulty")
-	topic := c.Param("topic")
+	topicSlug := c.Param("topic") // Renamed for clarity, was 'topic'
+	log.Printf("GetQuestions: Received request for difficulty '%s', topicSlug '%s'", difficulty, topicSlug)
 
-	filteredQuestions := []Question{}
-	for _, q := range questions { // questions would be from data.go
-		if q.Difficulty == difficulty && q.Topic == topic {
-			filteredQuestions = append(filteredQuestions, q)
-		}
+	// 1. Find the topic by slug to get its ID
+	var topic Topic
+	if err := DB.First(&topic, "slug = ?", topicSlug).Error; err != nil {
+		log.Printf("GetQuestions: Topic with slug '%s' not found. Error: %v", topicSlug, err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Topic not found: " + topicSlug})
+		return
 	}
-	c.JSON(http.StatusOK, gin.H{"questions": filteredQuestions})
+	log.Printf("GetQuestions: Found topic: ID=%d, Name='%s', Slug='%s'", topic.ID, topic.Name, topic.Slug)
+
+	// 2. Query questions from the database
+	var dbQuestions []Question // These are GORM models
+	if err := DB.Where("topic_id = ? AND difficulty = ?", topic.ID, difficulty).Find(&dbQuestions).Error; err != nil {
+		log.Printf("GetQuestions: Error retrieving questions for TopicID %d, Difficulty '%s'. Error: %v", topic.ID, difficulty, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve questions: " + err.Error()})
+		return
+	}
+	log.Printf("GetQuestions: Found %d questions in DB for TopicID %d, Difficulty '%s'", len(dbQuestions), topic.ID, difficulty)
+
+	// 3. Prepare questions for response, unmarshalling options
+	responseQuestions := []gin.H{}
+	for _, q := range dbQuestions {
+		var options []Option
+		if err := json.Unmarshal(q.Options, &options); err != nil {
+			// Log error, maybe skip this question or return an error for it
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse options for question ID " + q.OriginalID})
+			return
+		}
+		responseQuestions = append(responseQuestions, gin.H{
+			"id":         q.OriginalID, // Use OriginalID for consistency with old frontend if needed, or q.ID for DB ID
+			"topic":      topic.Name,   // Or topic.Slug if preferred by frontend
+			"difficulty": q.Difficulty,
+			"text":       q.Text,
+			"options":    options,
+		})
+	}
+	log.Printf("GetQuestions: Sending %d questions in response for topic '%s', difficulty '%s'", len(responseQuestions), topic.Name, difficulty)
+
+	c.JSON(http.StatusOK, gin.H{"questions": responseQuestions})
 }
 
 // SubmitAnswerBody defines the structure for submitting an answer
@@ -179,29 +248,28 @@ func SubmitAnswer(c *gin.Context) {
 		return
 	}
 
-	var selectedQuestion Question
-	var userSelectedOption Option // To store the option chosen by the user
-	questionFound := false
-	optionFound := false
-
-	for _, q := range questions {
-		if q.ID == body.QuestionID {
-			selectedQuestion = q
-			questionFound = true
-			for _, opt := range q.Options {
-				if opt.ID == body.AnswerID {
-					userSelectedOption = opt
-					optionFound = true
-					break
-				}
-			}
-			break
-		}
-	}
-
-	if !questionFound {
+	var dbQuestion Question // This is the GORM model
+	// 1. Fetch question from DB using OriginalID
+	if err := DB.First(&dbQuestion, "original_id = ?", body.QuestionID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Question not found"})
 		return
+	}
+
+	// 2. Unmarshal options from JSONB
+	var questionOptions []Option
+	if err := json.Unmarshal(dbQuestion.Options, &questionOptions); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse question options"})
+		return
+	}
+
+	var userSelectedOption Option
+	optionFound := false
+	for _, opt := range questionOptions {
+		if opt.ID == body.AnswerID {
+			userSelectedOption = opt
+			optionFound = true
+			break
+		}
 	}
 
 	if !optionFound {
@@ -211,19 +279,19 @@ func SubmitAnswer(c *gin.Context) {
 
 	// Prepare all options with their details for the response
 	optionsWithDetails := []Option{}
-	for _, opt := range selectedQuestion.Options {
+	for _, opt := range questionOptions {
 		optionsWithDetails = append(optionsWithDetails, Option{
 			ID:          opt.ID,
 			Text:        opt.Text,
-			IsCorrect:   opt.IsCorrect,   // Expose IsCorrect for all options
-			Explanation: opt.Explanation, // Expose Explanation for all options
+			IsCorrect:   opt.IsCorrect,
+			Explanation: opt.Explanation,
 		})
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"questionId":       selectedQuestion.ID,
+		"questionId":       dbQuestion.OriginalID, // Or dbQuestion.ID if you want to return the numeric DB ID
 		"selectedOptionId": userSelectedOption.ID,
-		"isCorrect":        userSelectedOption.IsCorrect, // User's choice correctness
-		"options":          optionsWithDetails,           // All options with full details
+		"isCorrect":        userSelectedOption.IsCorrect,
+		"options":          optionsWithDetails,
 	})
 }

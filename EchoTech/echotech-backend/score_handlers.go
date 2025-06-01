@@ -47,9 +47,16 @@ func SubmitScore(c *gin.Context) {
 		return
 	}
 
+	// Find the topic by slug to get its ID
+	var topic Topic
+	if err := DB.First(&topic, "slug = ?", submission.Topic).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid topic: " + submission.Topic})
+		return
+	}
+
 	score := Score{
 		UserID:      uint(userID),
-		Topic:       submission.Topic,
+		TopicID:     topic.ID, // Use the ID of the found topic
 		Difficulty:  submission.Difficulty,
 		Points:      submission.Points,
 		Total:       submission.Total,

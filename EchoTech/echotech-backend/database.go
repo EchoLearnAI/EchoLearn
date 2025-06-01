@@ -30,7 +30,7 @@ func ConnectDatabase() {
 	log.Println("Database connection successful.")
 
 	// Auto-migrate schemas
-	err = database.AutoMigrate(&User{}, &Score{})
+	err = database.AutoMigrate(&User{}, &Score{}, &Category{}, &Topic{}, &Question{})
 	if err != nil {
 		log.Fatal("Failed to migrate database!", err)
 		return

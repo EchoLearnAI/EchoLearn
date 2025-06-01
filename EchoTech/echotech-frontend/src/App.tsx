@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
+import { Category, Topic } from './types';
+import CategoryScreen from './components/CategoryScreen';
 import DifficultyScreen from './components/DifficultyScreen';
 import TopicScreen from './components/TopicScreen';
 import QuestionScreen from './components/QuestionScreen';
@@ -8,12 +10,13 @@ import LoginScreen from './components/LoginScreen';
 import RegisterScreen from './components/RegisterScreen';
 import UserScoresScreen from './components/UserScoresScreen';
 
-type Screen = 'login' | 'register' | 'difficulty' | 'topic' | 'question' | 'result' | 'scores';
+type Screen = 'login' | 'register' | 'category' | 'topic' | 'difficulty' | 'question' | 'result' | 'scores';
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
-  const [difficulty, setDifficulty] = useState<string>('');
-  const [topic, setTopic] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('');
   const [score, setScore] = useState(0);
   const [totalQuestions, setTotalQuestions] = useState(0);
   const [token, setToken] = useState<string | null>(localStorage.getItem('echotech_token'));
@@ -22,7 +25,7 @@ function App() {
 
   useEffect(() => {
     if (token) {
-      setCurrentScreen('difficulty'); // or 'scores' or a dashboard
+      setCurrentScreen('category');
     } else {
       setCurrentScreen('login');
     }
@@ -35,7 +38,7 @@ function App() {
     setToken(newToken);
     setUserId(newUserId);
     setUserEmail(newUserEmail);
-    setCurrentScreen('difficulty');
+    setCurrentScreen('category');
   };
 
   const handleLogout = () => {
@@ -46,37 +49,41 @@ function App() {
     setUserId(null);
     setUserEmail(null);
     setCurrentScreen('login');
-    // Reset quiz state too
-    setDifficulty('');
-    setTopic('');
+    setSelectedCategory(null);
+    setSelectedTopic(null);
+    setSelectedDifficulty('');
     setScore(0);
     setTotalQuestions(0);
   };
 
-  const handleSelectDifficulty = (selectedDifficulty: string) => {
-    setDifficulty(selectedDifficulty);
+  const handleCategorySelect = (category: Category) => {
+    setSelectedCategory(category);
     setCurrentScreen('topic');
   };
 
-  const handleSelectTopic = (selectedTopic: string) => {
-    setTopic(selectedTopic);
+  const handleTopicSelect = (topic: Topic) => {
+    setSelectedTopic(topic);
+    setCurrentScreen('difficulty');
+  };
+  
+  const handleDifficultySelect = (difficulty: string) => {
+    setSelectedDifficulty(difficulty);
     setCurrentScreen('question');
   };
 
   const handleQuizComplete = (finalScore: number, numQuestions: number) => {
     setScore(finalScore);
     setTotalQuestions(numQuestions);
-    // Attempt to save score to backend if token exists
-    if (token && difficulty && topic) {
-      fetch('http://localhost:8080/api/v1/scores', {
+    if (token && selectedTopic && selectedDifficulty) {
+      fetch('/api/v1/scores', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          topic: topic,
-          difficulty: difficulty,
+          topic: selectedTopic.slug,
+          difficulty: selectedDifficulty,
           points: finalScore,
           total: numQuestions,
         }),
@@ -95,15 +102,16 @@ function App() {
   };
 
   const handleRestartQuiz = () => {
-    setDifficulty('');
-    setTopic('');
+    setSelectedCategory(null);
+    setSelectedTopic(null);
+    setSelectedDifficulty('');
     setScore(0);
     setTotalQuestions(0);
-    setCurrentScreen('difficulty');
+    setCurrentScreen('category');
   };
   
   const handleNavigateToHome = () => {
-    setCurrentScreen('difficulty');
+    setCurrentScreen('category');
   }
 
   const renderScreen = () => {
@@ -112,12 +120,17 @@ function App() {
         return <LoginScreen onLoginSuccess={handleLoginSuccess} onNavigateToRegister={() => setCurrentScreen('register')} />;
       case 'register':
         return <RegisterScreen onRegisterSuccess={() => setCurrentScreen('login')} onNavigateToLogin={() => setCurrentScreen('login')} />;
-      case 'difficulty':
-        return <DifficultyScreen onSelectDifficulty={handleSelectDifficulty} />;
+      case 'category':
+        return <CategoryScreen onCategorySelect={handleCategorySelect} currentDifficulty={null} />;
       case 'topic':
-        return <TopicScreen difficulty={difficulty} onSelectTopic={handleSelectTopic} onBack={() => setCurrentScreen('difficulty')} />;
+        if (!selectedCategory) return <CategoryScreen onCategorySelect={handleCategorySelect} currentDifficulty={null} />;
+        return <TopicScreen category={selectedCategory} onSelectTopic={handleTopicSelect} onBack={() => setCurrentScreen('category')} />;
+      case 'difficulty':
+        if (!selectedCategory || !selectedTopic) return <CategoryScreen onCategorySelect={handleCategorySelect} currentDifficulty={null} />;
+        return <DifficultyScreen onSelectDifficulty={handleDifficultySelect} onBack={() => setCurrentScreen('topic')} />;
       case 'question':
-        return <QuestionScreen difficulty={difficulty} topic={topic} onQuizComplete={handleQuizComplete} token={token} />;
+        if (!selectedTopic || !selectedDifficulty) return <CategoryScreen onCategorySelect={handleCategorySelect} currentDifficulty={null} />;
+        return <QuestionScreen difficulty={selectedDifficulty} topic={selectedTopic.slug} onQuizComplete={handleQuizComplete} token={token} />;
       case 'result':
         return <ResultScreen score={score} totalQuestions={totalQuestions} onRestart={handleRestartQuiz} />;
       case 'scores':

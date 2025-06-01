@@ -242,3 +242,82 @@ h1, h2 {
     border: 1px solid #ccc;
     margin-left: 10px;
 }
+
+/* General Screen Styling */
+.screen {
+  padding: 20px;
+  text-align: center;
+  background-color: #f0f7f0; /* Lighter green for screen background */
+  min-height: calc(100vh - 60px); /* Adjust based on header height */
+}
+
+.screen h2 {
+  color: #004d00; /* Dark green for titles */
+  margin-bottom: 25px;
+}
+
+/* Item Grid for Categories, Topics, Difficulties */
+.item-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.item-button {
+  background-color: #4CAF50; /* Main green */
+  color: white;
+  border: none;
+  padding: 15px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.item-button:hover {
+  background-color: #367c39; /* Darker green on hover */
+  transform: translateY(-2px);
+}
+
+.item-button:active {
+  background-color: #2e6b2e;
+  transform: translateY(0);
+}
+
+/* Specific screen styling if needed */
+.category-screen .item-button {
+  background-color: #5cb85c; /* Slightly different green for categories */
+}
+.category-screen .item-button:hover {
+  background-color: #4cae4c;
+}
+
+/* Loading, Error, Info Messages */
+.loading-message, .error-message, .info-message {
+  font-size: 1.2em;
+  padding: 20px;
+  border-radius: 5px;
+  margin-top: 20px;
+}
+
+.loading-message {
+  color: #004d00;
+}
+
+.error-message {
+  background-color: #f8d7da; /* Light red */
+  color: #721c24; /* Dark red */
+  border: 1px solid #f5c6cb;
+}
+
+.info-message {
+  background-color: #e2e3e5; /* Light grey */
+  color: #383d41; /* Dark grey */
+  border: 1px solid #d6d8db;
+}
